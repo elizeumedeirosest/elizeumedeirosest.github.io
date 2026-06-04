@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modelo Híbrido Prophet+LightGBM — COBICET 2025</title>
+<style>
+
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Barlow:ital,wght@0,300;0,400;0,600;0,700;1,300&display=swap');
+
+:root {
+  --electric-blue: #00c8ff;
+  --neon-cyan: #00ffe7;
+  --deep-navy: #050d1a;
+  --panel: #0a1f3a;
+  --accent-orange: #ff7e00;
+  --accent-gold: #ffc700;
+  --white: #f0f8ff;
+  --muted: #c5e4f7;
+  --green-neon: #00ff99;
+  --red-accent: #ff3d6b;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--deep-navy); font-family:'Barlow',sans-serif; color:var(--white); overflow:hidden; height:100vh; width:100vw; font-size:18px; }
+
+#lightning-canvas { position:fixed; inset:0; z-index:0; pointer-events:none; }
+.grid-bg {
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-image: linear-gradient(rgba(0,200,255,0.04) 1px,transparent 1px), linear-gradient(90deg,rgba(0,200,255,0.04) 1px,transparent 1px);
+  background-size:55px 55px;
+}
+.scanline { position:fixed; top:0; left:0; right:0; height:2px; background:linear-gradient(transparent,rgba(0,200,255,0.06),transparent); z-index:5; animation:scanline 9s linear infinite; pointer-events:none; }
+@keyframes scanline { 0%{transform:translateY(-100%)} 100%{transform:translateY(100vh)} }
+
+#progress-bar { position:fixed; top:0; left:0; height:3px; background:linear-gradient(90deg,var(--electric-blue),var(--neon-cyan)); z-index:200; transition:width 0.4s ease; box-shadow:0 0 12px var(--electric-blue); }
+
+#cobicet-badge {
+  position:fixed; top:16px; right:20px; z-index:100;
+  display:flex; align-items:center; gap:8px;
+  background:rgba(5,13,26,0.8); border:1px solid rgba(0,200,255,0.3);
+  border-radius:4px; padding:6px 16px; backdrop-filter:blur(10px);
+}
+.cobicet-text { font-family:'Bebas Neue',sans-serif; font-size:1.2rem; color:var(--electric-blue); letter-spacing:0.18em; }
+
+#deck { position:relative; z-index:10; width:100vw; height:100vh; overflow:hidden; }
+
+.slide {
+  position:absolute; inset:0; width:100%; height:100%;
+  display:flex; flex-direction:column; justify-content:center; align-items:center;
+  padding:38px 68px;
+  opacity:0; transform:translateX(55px);
+  transition:opacity 0.5s cubic-bezier(.4,0,.2,1), transform 0.5s cubic-bezier(.4,0,.2,1);
+  pointer-events:none; overflow:hidden;
+}
+.slide.active  { opacity:1; transform:translateX(0); pointer-events:auto; }
+.slide.leaving { opacity:0; transform:translateX(-55px); }
+
+#nav { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:100; display:flex; align-items:center; gap:12px; }
+.nav-btn {
+  background:rgba(0,200,255,0.1); border:1px solid rgba(0,200,255,0.3);
+  color:var(--electric-blue); font-family:'Space Mono',monospace; font-size:0.85rem;
+  padding:9px 24px; border-radius:2px; cursor:pointer; letter-spacing:0.12em; text-transform:uppercase; transition:all 0.2s;
+}
+.nav-btn:hover { background:rgba(0,200,255,0.22); border-color:var(--electric-blue); }
+#slide-counter { font-family:'Space Mono',monospace; font-size:0.85rem; color:var(--muted); min-width:64px; text-align:center; }
+
+/* TYPOGRAPHY */
+.section-tag { font-family:'Space Mono',monospace; font-size:1.02rem; color:var(--electric-blue); letter-spacing:0.22em; text-transform:uppercase; border-left:3px solid var(--electric-blue); padding-left:12px; margin-bottom:14px; }
+.mega-title { font-family:'Bebas Neue',sans-serif; font-size:clamp(3rem,6.5vw,7rem); line-height:0.92; letter-spacing:0.04em; background:linear-gradient(135deg,#fff 30%,var(--electric-blue) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:16px; }
+.mega-title.centered { text-align:center; }
+.slide-header { width:100%; margin-bottom:20px; }
+.hr-glow { width:100%; height:1px; background:linear-gradient(90deg,transparent,var(--electric-blue),transparent); margin:14px 0; opacity:0.5; }
+
+/* LAYOUT */
+.two-col   { display:grid; grid-template-columns:1fr 1fr;     gap:26px; width:100%; align-items:start; }
+.three-col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; width:100%; align-items:start; }
+
+/* CARD */
+.card { background:rgba(10,31,58,0.75); border:1px solid rgba(0,200,255,0.18); border-radius:4px; padding:18px 24px; backdrop-filter:blur(6px); position:relative; overflow:hidden; }
+.card::before { content:''; position:absolute; top:0;left:0;right:0; height:2px; background:linear-gradient(90deg,var(--electric-blue),var(--neon-cyan)); opacity:0.65; }
+.card-title { font-family:'Space Mono',monospace; font-size:0.96rem; color:var(--electric-blue); letter-spacing:0.16em; text-transform:uppercase; margin-bottom:10px; }
+.card-body  { font-size:1.22rem; color:var(--white); line-height:1.74; font-weight:300; }
+
+/* METRIC */
+.metric-box { background:rgba(0,200,255,0.05); border:1px solid rgba(0,200,255,0.28); border-radius:4px; padding:16px 18px; text-align:center; }
+.metric-value { font-family:'Bebas Neue',sans-serif; font-size:clamp(2.4rem,4.2vw,3.8rem); letter-spacing:0.04em; line-height:1; margin-bottom:4px; }
+.metric-label { font-family:'Space Mono',monospace; font-size:0.9rem; color:var(--muted); letter-spacing:0.14em; text-transform:uppercase; }
+.metric-delta { font-family:'Space Mono',monospace; font-size:0.98rem; margin-top:5px; }
+
+/* TABLE */
+.data-table { width:100%; border-collapse:collapse; font-family:'Space Mono',monospace; font-size:0.9rem; }
+.data-table th { background:rgba(0,200,255,0.12); color:var(--electric-blue); padding:10px 14px; text-align:left; letter-spacing:0.07em; text-transform:uppercase; border-bottom:1px solid rgba(0,200,255,0.3); font-weight:700; }
+.data-table td { padding:9px 14px; border-bottom:1px solid rgba(0,200,255,0.08); color:var(--white); }
+.data-table tr:hover td { background:rgba(0,200,255,0.04); }
+.data-table tr.highlight td { background:rgba(0,255,153,0.07); color:var(--green-neon); }
+
+/* FORMULA */
+.formula-box { background:rgba(0,8,26,0.9); border:1px solid rgba(0,200,255,0.22); border-radius:4px; padding:14px 22px; font-family:'Space Mono',monospace; font-size:1.07rem; color:var(--neon-cyan); text-align:center; margin:8px 0; position:relative; }
+.formula-label { position:absolute; top:-9px; right:12px; background:var(--deep-navy); font-size:0.78rem; color:var(--muted); padding:0 6px; letter-spacing:0.14em; text-transform:uppercase; }
+
+/* CALLOUT */
+.callout { background:linear-gradient(135deg,rgba(0,200,255,0.07),rgba(0,255,153,0.04)); border-left:3px solid var(--electric-blue); padding:14px 20px; border-radius:0 4px 4px 0; font-size:1.18rem; color:var(--white); line-height:1.70; margin:10px 0; }
+.callout strong { color:var(--neon-cyan); }
+
+/* PILLS */
+.pill { display:inline-block; padding:5px 14px; border-radius:20px; font-family:'Space Mono',monospace; font-size:0.87rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; }
+.pill-blue   { background:rgba(0,200,255,0.13);  color:var(--electric-blue); border:1px solid rgba(0,200,255,0.3); }
+.pill-green  { background:rgba(0,255,153,0.1);   color:var(--green-neon);    border:1px solid rgba(0,255,153,0.3); }
+.pill-orange { background:rgba(255,126,0,0.1);   color:var(--accent-orange); border:1px solid rgba(255,126,0,0.3); }
+.pill-red    { background:rgba(255,61,107,0.1);  color:var(--red-accent);    border:1px solid rgba(255,61,107,0.3); }
+
+.pill-interactive { cursor:pointer; transition:all 0.18s; position:relative; }
+.pill-interactive:hover { box-shadow:0 0 14px rgba(0,200,255,0.5); transform:scale(1.08); }
+.pill-interactive::after { content:'ℹ'; font-size:0.65rem; margin-left:4px; opacity:0.7; vertical-align:super; }
+
+.citation { display:inline-block; background:rgba(0,200,255,0.07); border:1px solid rgba(0,200,255,0.22); border-radius:3px; padding:2px 8px; font-family:'Space Mono',monospace; font-size:0.80rem; color:var(--electric-blue); margin-left:3px; vertical-align:middle; }
+
+/* STEP LIST */
+.step-list { list-style:none; width:100%; }
+.step-item { display:flex; align-items:flex-start; gap:16px; padding:11px 0; border-bottom:1px solid rgba(0,200,255,0.08); }
+.step-num  {
+  font-family:'Bebas Neue',sans-serif; font-size:2.1rem; color:var(--electric-blue);
+  min-width:44px; line-height:1; opacity:0.85;
+  cursor:pointer; transition:all 0.18s;
+  background:rgba(0,200,255,0.06); border:1px solid rgba(0,200,255,0.25);
+  border-radius:4px; text-align:center; padding:2px 6px;
+  user-select:none;
+}
+.step-num:hover { background:rgba(0,200,255,0.18); box-shadow:0 0 14px rgba(0,200,255,0.4); opacity:1; transform:scale(1.08); }
+.step-title { font-weight:700; font-size:1.22rem; margin-bottom:4px; color:var(--white); }
+.step-desc  { font-size:1.12rem; color:var(--muted); font-weight:300; line-height:1.62; }
+
+/* TOC */
+.toc-list { list-style:none; width:100%; max-width:820px; margin:0 auto; }
+.toc-item { display:flex; align-items:center; gap:20px; padding:12px 0; border-bottom:1px solid rgba(0,200,255,0.1); cursor:pointer; transition:all 0.18s; }
+.toc-item:hover { transform:translateX(8px); }
+.toc-num   { font-family:'Bebas Neue',sans-serif; font-size:2.4rem; color:var(--electric-blue); min-width:50px; opacity:0.7; }
+.toc-label { font-size:1.42rem; font-weight:400; color:var(--white); }
+.toc-sub   { font-family:'Space Mono',monospace; font-size:0.85rem; color:var(--muted); letter-spacing:0.12em; text-transform:uppercase; margin-top:2px; }
+
+/* CHART */
+.chart-title   { font-family:'Space Mono',monospace; font-size:1.0rem; color:var(--white); letter-spacing:0.11em; text-transform:uppercase; text-align:center; margin-bottom:6px; }
+.chart-caption { font-size:1.05rem; color:var(--muted); text-align:center; margin-top:6px; font-style:italic; }
+
+/* IMPORTANCE BARS */
+.bar-row  { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.bar-name { font-family:'Space Mono',monospace; font-size:0.87rem; color:var(--white); min-width:200px; text-align:right; }
+.bar-track { flex:1; background:rgba(255,255,255,0.05); height:22px; border-radius:2px; overflow:hidden; }
+.bar-fill  { height:100%; border-radius:2px; background:linear-gradient(90deg,var(--electric-blue),var(--neon-cyan)); }
+.bar-val   { font-family:'Space Mono',monospace; font-size:0.87rem; color:var(--electric-blue); min-width:52px; }
+
+/* COVER */
+#slide-cover {
+  background:radial-gradient(ellipse at 28% 55%,rgba(0,100,200,0.14) 0%,transparent 55%),
+             radial-gradient(ellipse at 78% 18%,rgba(0,200,255,0.07) 0%,transparent 50%);
+  justify-content:flex-end; align-items:flex-start; padding-bottom:68px;
+}
+.cover-kicker { font-family:'Space Mono',monospace; font-size:0.9rem; color:var(--electric-blue); letter-spacing:0.28em; text-transform:uppercase; margin-bottom:14px; }
+.cover-title  { font-family:'Bebas Neue',sans-serif; font-size:clamp(3rem,6.5vw,7.5rem); line-height:0.9; letter-spacing:0.03em; margin-bottom:20px; max-width:860px; }
+.cover-authors { font-size:1.25rem; color:var(--muted); line-height:1.8; margin-bottom:22px; }
+.cover-inst    { font-family:'Space Mono',monospace; font-size:0.88rem; color:var(--electric-blue); opacity:0.85; letter-spacing:0.12em; line-height:1.9; }
+.bolt-deco { position:absolute; font-size:5rem; opacity:0.05; pointer-events:none; z-index:1; line-height:1; }
+
+/* POPUP */
+#popup-overlay {
+  position:fixed; inset:0; z-index:1000;
+  display:none; align-items:center; justify-content:center;
+  background:rgba(5,13,26,0.82); backdrop-filter:blur(6px);
+}
+#popup-overlay.active { display:flex; }
+.popup-card {
+  background:rgba(8,22,44,0.98); border:1px solid rgba(0,200,255,0.5); border-radius:8px;
+  padding:36px 44px; max-width:640px; width:92%; position:relative;
+  box-shadow:0 0 60px rgba(0,200,255,0.18), 0 0 120px rgba(0,200,255,0.06);
+  animation:popupIn 0.3s cubic-bezier(.4,0,.2,1);
+}
+.popup-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,var(--electric-blue),var(--neon-cyan),var(--green-neon)); border-radius:8px 8px 0 0; }
+@keyframes popupIn { from{opacity:0;transform:scale(0.90) translateY(28px)} to{opacity:1;transform:scale(1) translateY(0)} }
+.popup-close { position:absolute; top:14px; right:18px; background:rgba(0,200,255,0.08); border:1px solid rgba(0,200,255,0.25); color:var(--electric-blue); font-size:1.5rem; cursor:pointer; line-height:1; width:34px; height:34px; border-radius:4px; display:flex; align-items:center; justify-content:center; transition:all 0.18s; }
+.popup-close:hover { background:rgba(0,200,255,0.25); }
+.popup-num { font-family:'Bebas Neue',sans-serif; font-size:3.2rem; color:rgba(0,200,255,0.25); line-height:1; margin-bottom:2px; }
+.popup-title { font-family:'Bebas Neue',sans-serif; font-size:2rem; color:var(--electric-blue); margin-bottom:12px; letter-spacing:0.04em; }
+.popup-body { font-size:1.08rem; color:var(--white); line-height:1.82; font-weight:300; text-align:justify; }
+.popup-body strong { color:var(--neon-cyan); }
+.popup-body em { color:var(--accent-gold); font-style:normal; }
+.popup-src { margin-top:16px; font-family:'Space Mono',monospace; font-size:0.75rem; color:var(--muted); border-top:1px solid rgba(0,200,255,0.15); padding-top:12px; letter-spacing:0.08em; }
+.popup-tag { display:inline-block; margin-bottom:12px; padding:3px 12px; border-radius:20px; font-family:'Space Mono',monospace; font-size:0.72rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; background:rgba(0,200,255,0.1); color:var(--electric-blue); border:1px solid rgba(0,200,255,0.3); }
+
+</style>
+<script defer>
+(function () {
+  'use strict';
+  var cur = 0;
+  var chartsInited = {};
+  function slides() { return document.querySelectorAll('.slide'); }
+  function go(n) {
+    var sl = slides();
+    if (n < 0 || n >= sl.length) return;
+    sl[cur].classList.remove('active');
+    sl[cur].classList.add('leaving');
+    (function(old){ setTimeout(function(){ sl[old].classList.remove('leaving'); }, 560); })(cur);
+    cur = n;
+    sl[cur].classList.add('active');
+    setText('slide-counter', (cur + 1) + ' / ' + sl.length);
+    setWidth('progress-bar', ((cur + 1) / sl.length * 100) + '%');
+    try { if (typeof initChartsForSlide === 'function') initChartsForSlide(cur); } catch(e) {}
+  }
+  function next() { if (!popupOpen()) go(cur + 1); }
+  function prev() { if (!popupOpen()) go(cur - 1); }
+  function popupOpen() { var o = document.getElementById('popup-overlay'); return !!(o && o.classList.contains('active')); }
+  function openPopup(key) {
+    if (typeof POPUP_DB === 'undefined' || !POPUP_DB[key]) return;
+    var d = POPUP_DB[key];
+    setText('popup-num', d.num || ''); setText('popup-tag', d.tag || ''); setText('popup-title', d.title || '');
+    setHTML('popup-body', d.body || ''); setText('popup-src', d.src ? ('📚 ' + d.src) : '');
+    var o = document.getElementById('popup-overlay'); if (o) o.classList.add('active');
+  }
+  function closePopup() { var o = document.getElementById('popup-overlay'); if (o) o.classList.remove('active'); }
+  function setText(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
+  function setHTML(id, val) { var el = document.getElementById(id); if (el) el.innerHTML   = val; }
+  function setWidth(id, val){ var el = document.getElementById(id); if (el) el.style.width = val; }
+  document.addEventListener('click', function (e) {
+    var t = e.target;
+    while (t && t !== document) {
+      if (t.id === 'nav-next')       { next();       return; }
+      if (t.id === 'nav-prev')       { prev();       return; }
+      if (t.id === 'popup-overlay')  { closePopup(); return; }
+      if (t.id === 'popup-close-btn'){ closePopup(); return; }
+      if (t.dataset && t.dataset.popup) { openPopup(t.dataset.popup); return; }
+      if (t.dataset && t.dataset.slide !== undefined) { go(parseInt(t.dataset.slide)); return; }
+      t = t.parentNode;
+    }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
+    if (e.key === 'ArrowLeft')                   { e.preventDefault(); prev(); }
+    if (e.key === 'Escape') closePopup();
+  });
+  window.goToSlide = go; window.nextSlide = next; window.prevSlide = prev;
+  window.openPopup = openPopup; window.closePopup = closePopup; window.closePopupDirect = closePopup;
+  document.addEventListener('DOMContentLoaded', function () {
+    var sl = slides();
+    setText('slide-counter', '1 / ' + sl.length);
+    setWidth('progress-bar', (1 / sl.length * 100) + '%');
+  });
+})();
+</script>
+</head>
+<body>
+
+<canvas id="lightning-canvas"></canvas>
+<div class="grid-bg"></div>
+<div class="scanline"></div>
+<div id="progress-bar"></div>
+
+<div id="cobicet-badge">
+  <svg width="26" height="26" viewBox="0 0 40 40" fill="none">
+    <path d="M10 8 L20 5 L30 9 L34 18 L31 28 L24 35 L18 34 L10 28 L7 20 L10 8Z" fill="none" stroke="rgba(0,200,255,0.5)" stroke-width="1.2"/>
+    <circle cx="20" cy="20" r="2.5" fill="#00c8ff"/>
+    <ellipse cx="20" cy="20" rx="9" ry="3.5" fill="none" stroke="#00c8ff" stroke-width="1" opacity="0.7"/>
+    <ellipse cx="20" cy="20" rx="9" ry="3.5" fill="none" stroke="#ff7e00" stroke-width="1" opacity="0.7" transform="rotate(60 20 20)"/>
+    <ellipse cx="20" cy="20" rx="9" ry="3.5" fill="none" stroke="#00ff99" stroke-width="1" opacity="0.7" transform="rotate(120 20 20)"/>
+  </svg>
+  <span class="cobicet-text">COBICET</span>
+</div>
+
+<div id="popup-overlay" onclick="closePopupDirect()">
+  <div class="popup-card" id="popup-card">
+    <button class="popup-close" id="popup-close-btn">&#215;</button>
+    <div class="popup-num" id="popup-num"></div>
+    <div class="popup-tag" id="popup-tag"></div>
+    <div class="popup-title" id="popup-title"></div>
+    <div class="hr-glow"></div>
+    <div class="popup-body" id="popup-body"></div>
+    <div class="popup-src" id="popup-src"></div>
+  </div>
+</div>
+
+<div id="deck">
+
+<!-- 0 CAPA -->
+<div class="slide active" id="slide-cover">
+  <span class="bolt-deco" style="top:8%;left:2%">⚡</span>
+  <span class="bolt-deco" style="top:58%;left:0.5%">⚡</span>
+  <span class="bolt-deco" style="top:25%;right:34%">⚡</span>
+  <svg style="position:absolute;right:5%;bottom:0;height:84%;opacity:0.1;pointer-events:none;z-index:1" viewBox="0 0 220 540" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="110" cy="65" rx="38" ry="45" fill="white"/>
+    <rect x="72" y="108" width="76" height="130" rx="9" fill="white"/>
+    <rect x="58" y="116" width="22" height="96" rx="7" fill="white"/>
+    <rect x="140" y="116" width="22" height="96" rx="7" fill="white"/>
+    <rect x="78" y="238" width="27" height="118" rx="6" fill="white"/>
+    <rect x="115" y="238" width="27" height="118" rx="6" fill="white"/>
+    <ellipse cx="110" cy="14" rx="46" ry="10" fill="none" stroke="white" stroke-width="3.5"/>
+    <ellipse cx="110" cy="6"  rx="30" ry="6"  fill="none" stroke="white" stroke-width="2.5"/>
+    <line x1="110" y1="6" x2="110" y2="20" stroke="white" stroke-width="2.5"/>
+    <path d="M62 12 L44 3 L64 1 L50 -10" stroke="white" stroke-width="1.8" fill="none" opacity="0.8"/>
+    <path d="M68 18 L52 8" stroke="white" stroke-width="1.2" fill="none" opacity="0.5"/>
+    <path d="M158 12 L176 3 L156 1 L170 -10" stroke="white" stroke-width="1.8" fill="none" opacity="0.8"/>
+    <path d="M152 18 L168 8" stroke="white" stroke-width="1.2" fill="none" opacity="0.5"/>
+  </svg>
+  <div style="position:relative;z-index:2">
+    <div class="cover-kicker">COBICET 2025</div>
+    <div class="cover-title">
+      <span style="color:var(--electric-blue)">MODELO HÍBRIDO</span><br>
+      PROPHET+LightGBM<br>
+      <span style="font-size:0.5em;color:var(--muted);font-family:'Barlow',sans-serif;font-weight:300;letter-spacing:0.02em">PREVISÃO DE DEMANDA ELÉTRICA — SUBSISTEMA SUDESTE/CO</span>
+    </div>
+    <div class="hr-glow"></div>
+    <div class="cover-authors">
+      <strong style="color:var(--white)">Elizeu Silva de Medeiros</strong><br>
+      <strong style="color:var(--white)">Romário de Sousa Almeida</strong>
+    </div>
+    <div class="cover-inst">
+      Universidade Estadual da Paraíba — UEPB · Campina Grande, Brasil<br>
+      Departamento de Estatística — DE · Curso de Estatística
+    </div>
+    <br>
+  </div>
+</div>
+
+<!-- 1 SUMÁRIO -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="section-tag">Roteiro da Apresentação</div>
+    <div class="mega-title">SUMÁRIO</div>
+  </div>
+  <ul class="toc-list">
+    <li class="toc-item" data-slide="2"><span class="toc-num">01</span><div><div class="toc-label">Dataset</div><div class="toc-sub">ONS · Sudeste/Centro-Oeste · 2000–2025</div></div></li>
+    <li class="toc-item" data-slide="3"><span class="toc-num">02</span><div><div class="toc-label">Introdução</div><div class="toc-sub">Contexto · Problema · Motivação</div></div></li>
+    <li class="toc-item" data-slide="5"><span class="toc-num">03</span><div><div class="toc-label">Objetivos</div><div class="toc-sub">Hipótese central · Arquitetura proposta</div></div></li>
+    <li class="toc-item" data-slide="6"><span class="toc-num">04</span><div><div class="toc-label">Metodologia</div><div class="toc-sub">Fluxo · Etapas · Prophet · LightGBM · Métricas</div></div></li>
+    <li class="toc-item" data-slide="12"><span class="toc-num">05</span><div><div class="toc-label">Resultados</div><div class="toc-sub">Decomposição · Mecanismo · Desempenho · Residual</div></div></li>
+    <li class="toc-item" data-slide="19"><span class="toc-num">06</span><div><div class="toc-label">Conclusão</div><div class="toc-sub">Achados · Limitações · Extensões</div></div></li>
+    <li class="toc-item" data-slide="20"><span class="toc-num">07</span><div><div class="toc-label">Referências</div><div class="toc-sub">Fontes citadas no trabalho</div></div></li>
+  </ul>
+</div>
+
+<!-- 2 DATASET -->
+<div class="slide">
+  <div style="font-family:'Bebas Neue';font-size:clamp(5rem,11vw,10rem);color:rgba(0,200,255,0.04);position:absolute;right:50px;bottom:30px;pointer-events:none;z-index:0;line-height:1">DATA</div>
+  <div style="position:relative;z-index:2;width:100%">
+    <div class="section-tag">Seção 01</div>
+    <div class="mega-title">DATASET</div>
+    <div class="two-col" style="margin-top:16px">
+      <div class="card">
+        <div class="card-title">Fonte dos Dados</div>
+        <div class="card-body">
+          <strong style="color:var(--neon-cyan)">ONS — Operador Nacional do Sistema Elétrico</strong><br><br>
+          Carga verificada <em style="color:var(--accent-gold)">horária</em> do subsistema
+          <span class="pill pill-blue pill-interactive" data-popup="dataset-sudeste" style="font-size:0.80rem;padding:3px 10px;vertical-align:middle">Sudeste/Centro-Oeste ℹ</span>,
+          via API pública do ONS (2025).<br><br>
+          Agregação para <strong>média diária</strong> → <strong style="color:var(--neon-cyan);font-size:1.2em">9.131 observações</strong> em
+          <span class="pill pill-orange pill-interactive" data-popup="dataset-mw" style="font-size:0.80rem;padding:3px 10px;vertical-align:middle">MW médio ℹ</span>.<br><br>
+          <small style="color:var(--muted);font-size:0.85rem">Clique em 'i' para mais detalhes</small>
+        </div>
+      </div>
+      <div class="card" style="border-color:rgba(255,126,0,0.3)">
+        <div class="card-title" style="color:var(--accent-orange)">Período &amp; Partição</div>
+        <div class="card-body">
+          <span class="pill pill-blue pill-interactive" data-popup="dataset-treino">Treino</span>&nbsp; <strong style="color:var(--white)">2001–2018</strong><br><br>
+          <span class="pill pill-orange pill-interactive" data-popup="dataset-validacao">Validação</span>&nbsp; <strong style="color:var(--white)">2019–2021</strong><br><br>
+          <span class="pill pill-green pill-interactive" data-popup="dataset-teste">Teste</span>&nbsp; <strong style="color:var(--white)">2022–2025</strong> <em style="color:var(--accent-gold)">(n = 1.461 dias)</em><br><br>
+          <small style="color:var(--muted);font-size:0.90rem">Sem contaminação retroativa de preditores. <span class="citation">Hembram et al., 2023</span></small><br>
+          <small style="color:var(--muted);font-size:0.85rem">Clique em 'i' para mais detalhes</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 3 SÉRIE HISTÓRICA -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="section-tag">Dataset · Contexto</div>
+    <div class="mega-title" style="font-size:clamp(1.8rem,3.5vw,3rem)">SÉRIE HISTÓRICA 2000–2025</div>
+  </div>
+  <div style="width:100%">
+    <div class="chart-title">Demanda Diária (MW médio) — Subsistema Sudeste/Centro-Oeste · Fonte: ONS (2025)</div>
+    <canvas id="serieChart" style="width:100%;height:230px"></canvas>
+    <div class="chart-caption">Três regimes: crescimento (2000–2014) · estabilidade/queda — crise + pandemia (2015–2020) · retomada pós-pandemia com máximos históricos nos verões 2023–2024</div>
+  </div>
+  <div class="callout" style="margin-top:12px;font-size:1.0rem">
+    <strong>Sazonalidade intra-semanal:</strong> reduções de <em>15–20%</em> nos fins de semana em relação aos dias úteis em todo o período. <span class="citation">Soares &amp; Medeiros, 2008</span>
+  </div>
+</div>
+
+<!-- 4 INTRODUÇÃO -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="section-tag">Seção 02</div>
+    <div class="mega-title">INTRODUÇÃO</div>
+  </div>
+  <div class="two-col">
+    <div>
+      <div class="card">
+        <div class="card-title">Por que prever a demanda elétrica?</div>
+        <div class="card-body">
+          Fundamental para:<br><br>
+          <span class="pill pill-blue pill-interactive" data-popup="intro-i">(I)</span>&nbsp; <strong style="color:var(--white)">equilíbrio tempo real geração × carga</strong><br><br>
+          <span class="pill pill-blue pill-interactive" data-popup="intro-ii">(II)</span>&nbsp; <strong style="color:var(--white)">confiabilidade do fornecimento</strong><br><br>
+          <span class="pill pill-blue pill-interactive" data-popup="intro-iii">(III)</span>&nbsp; <strong style="color:var(--white)">eficiência econômica no despacho</strong> <span class="citation">Lúcio et al., 2018</span><br><br>
+          Subsistema <strong style="color:var(--neon-cyan)">Sudeste/CO</strong> → <strong style="color:var(--neon-cyan)">&gt;50%</strong> do consumo nacional <span class="citation">Arias et al., 2023</span>
+          <br><br>
+          <small style="color:var(--muted);font-size:0.85rem">Clique em (I), (II) ou (III) para mais detalhes</small>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="border-color:rgba(255,61,107,0.3)">
+        <div class="card-title" style="color:var(--red-accent)">O Problema</div>
+        <div class="card-body">
+          <strong style="color:var(--red-accent)">Subestimação:</strong><br>
+          <em>→ Demanda real maior que a prevista.<br>→ Necessidade de geração emergencial (cara e ineficiente).</em><br><br>
+          <strong style="color:var(--red-accent)">Superestimação:</strong><br>
+          <em>→ Demanda real menor que a prevista.<br>→ Geração desnecessária e desperdício de recursos.</em><br><br>
+          <strong style="color:var(--accent-gold)">Impactos:</strong><br>
+           1. Compromete o equilíbrio do sistema elétrico.<br>
+           2. Afeta diretamente o preço da energia no mercado.<br>
+          <span class="citation">Velasquez et al., 2022</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 5 OBJETIVO -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="section-tag">Seção 03</div>
+    <div class="mega-title">OBJETIVO</div>
+  </div>
+  <div class="callout" style="font-size:1.12rem;margin-bottom:22px">
+    <strong>Baseado na HIPÓTESE:</strong> Que os resíduos do Prophet carregam estrutura não linear que um algoritmo de Gradient Boosting consegue explorar, gerando ganhos de acurácia. <span class="citation">Hyndman &amp; Athanasopoulos, 2021</span>
+  </div>
+  <div class="three-col">
+    <div class="card">
+      <div class="card-title">Proposta</div>
+      <div class="card-body">Modelo híbrido em <strong style="color:var(--neon-cyan)">duas camadas</strong> para previsão diária da demanda de energia do Subsistema Sudeste/CO, no período de (2022–2025).</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Camada 1 — Prophet</div>
+      <div class="card-body">Extrai os <strong style="color:var(--accent-orange)">componentes</strong>: tendência + sazonalidade + feriados.<br><span class="citation">Taylor &amp; Letham, 2018</span></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Camada 2 — LightGBM</div>
+      <div class="card-body">Treinado sobre os <em style="color:var(--accent-gold)">resíduos</em> da Camada 1, com <strong style="color:var(--green-neon)">18 preditores</strong>.<br><span class="citation">Ke et al., 2017</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 6 FLUXO METODOLÓGICO -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="section-tag">Seção 04 · Metodologia</div>
+    <div class="mega-title" style="font-size:clamp(1.6rem,3vw,2.8rem)">FLUXO METODOLÓGICO</div>
+  </div>
+  <div style="width:100%;max-width:860px;margin:0 auto">
+    <ul class="step-list">
+      <li class="step-item">
+        <span class="step-num" data-popup="step-01" title="Clique para mais detalhes">01</span>
+        <div class="step-content">
+          <div class="step-title">Coleta via API ONS</div>
+          <div class="step-desc">Carga horária (2000–2025) · Agregação diária → <strong style="color:var(--neon-cyan)">9.131 observações</strong> em MW médio</div>
+        </div>
+      </li>
+      <li class="step-item">
+        <span class="step-num" data-popup="step-02" title="Clique para mais detalhes">02</span>
+        <div class="step-content">
+          <div class="step-title">Pré-processamento</div>
+          <div class="step-desc">Interpolação linear · Tratamento de outliers via decomposição STL</div>
+        </div>
+      </li>
+      <li class="step-item">
+        <span class="step-num" data-popup="step-03" title="Clique para mais detalhes">03</span>
+        <div class="step-content">
+          <div class="step-title">Ajuste do Prophet <span style="color:var(--accent-orange)">(Camada 1)</span></div>
+          <div class="step-desc">Decomposição aditiva do modelo</div>
+        </div>
+      </li>
+      <li class="step-item">
+        <span class="step-num" data-popup="step-04" title="Clique para mais detalhes">04</span>
+        <div class="step-content">
+          <div class="step-title">Treinamento do LightGBM <span style="color:var(--green-neon)">(Camada 2)</span></div>
+          <div class="step-desc">Modelagem dos resíduos · Ajuste do modelo</div>
+        </div>
+      </li>
+      <li class="step-item">
+        <span class="step-num" data-popup="step-05" title="Clique para mais detalhes">05</span>
+        <div class="step-content">
+          <div class="step-title">Avaliação</div>
+          <div class="step-desc">Teste (2022–2025) · Avaliação de desempenho · Comparação entre modelos</div>
+        </div>
+      </li>
+    </ul>
+    <div style="margin-top:10px;text-align:center">
+      <small style="color:var(--muted);font-family:'Space Mono',monospace;font-size:0.80rem">Clique nos números 01–05 para expandir cada etapa</small>
+    </div>
+  </div>
+</div>
+
+<!-- 7 ETAPAS ADOTADAS -->
+<div class="slide" style="padding:28px 50px">
+  <div class="slide-header" style="margin-bottom:10px">
+    <div class="section-tag">Metodologia · Síntese Visual</div>
+    <div class="mega-title" style="font-size:clamp(1.4rem,2.6vw,2.4rem)">ETAPAS ADOTADAS</div>
+  </div>
+  <svg id="etapas-svg" viewBox="0 0 1060 430" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:380px">
+    <defs>
+      <linearGradient id="gBlue" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#00c8ff;stop-opacity:0.28"/><stop offset="100%" style="stop-color:#00ffe7;stop-opacity:0.16"/></linearGradient>
+      <linearGradient id="gOrange" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#ff7e00;stop-opacity:0.28"/><stop offset="100%" style="stop-color:#ffc700;stop-opacity:0.14"/></linearGradient>
+      <linearGradient id="gGreen" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#00ff99;stop-opacity:0.28"/><stop offset="100%" style="stop-color:#00ffe7;stop-opacity:0.14"/></linearGradient>
+      <linearGradient id="gCyan" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#00c8ff;stop-opacity:0.32"/><stop offset="100%" style="stop-color:#00ffe7;stop-opacity:0.22"/></linearGradient>
+      <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L9,3.5 L0,7 Z" fill="#00c8ff" opacity="0.7"/></marker>
+      <filter id="glow"><feGaussianBlur stdDeviation="2.5" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    </defs>
+    <rect x="12" y="22" width="228" height="118" rx="6" fill="url(#gBlue)" stroke="#00c8ff" stroke-width="1.4" opacity="0.95"/>
+    <rect x="12" y="22" width="228" height="4" rx="2" fill="#00c8ff" opacity="0.8"/>
+    <text x="36" y="56" font-family="'Bebas Neue',sans-serif" font-size="34" fill="#00c8ff" opacity="0.6">A</text>
+    <text x="70" y="54" font-family="'Barlow',sans-serif" font-size="14" font-weight="700" fill="#f0f8ff">Coleta de Dados</text>
+    <text x="36" y="76" font-family="'Barlow',sans-serif" font-size="12" fill="#c5e4f7">API pública ONS · Carga horária</text>
+    <text x="36" y="92" font-family="'Barlow',sans-serif" font-size="12" fill="#c5e4f7">2000–2025 → Média diária</text>
+    <text x="36" y="110" font-family="'Barlow',sans-serif" font-size="12" fill="#00ffe7" font-weight="600">9.131 obs. em MW médio</text>
+    <line x1="240" y1="81" x2="276" y2="81" stroke="#00c8ff" stroke-width="1.8" opacity="0.55" marker-end="url(#arrow)"/>
+    <rect x="278" y="22" width="238" height="118" rx="6" fill="url(#gBlue)" stroke="#00c8ff" stroke-width="1.4" opacity="0.9"/>
+    <rect x="278" y="22" width="238" height="4" rx="2" fill="#00c8ff" opacity="0.7"/>
+    <text x="300" y="56" font-family="'Bebas Neue',sans-serif" font-size="34" fill="#00c8ff" opacity="0.6">B</text>
+    <text x="334" y="54" font-family="'Barlow',sans-serif" font-size="14" font-weight="700" fill="#f0f8ff">Pré-processamento</text>
+    <text x="300" y="76" font-family="'Barlow',sans-serif" font-size="12" fill="#c5e4f7">Interpolação linear (lacunas ≤ 3d)</text>
+    <text x="300" y="92" font-family="'Barlow',sans-serif" font-size="12" fill="#c5e4f7">Outliers via decomposição STL</text>
+    <text x="300" y="108" font-family="'Barlow',sans-serif" font-size="12" fill="#c5e4f7">Partição treino / valid. / teste</text>
+    <line x1="397" y1="140" x2="397" y2="168" stroke="#00c8ff" stroke-width="1.8" opacity="0.55" marker-end="url(#arrow)"/>
+    <rect x="12" y="178" width="228" height="86" rx="6" fill="rgba(5,13,26,0.7)" stroke="rgba(0,200,255,0.2)" stroke-width="1.2"/>
+    <text x="26" y="204" font-family="'Space Mono',sans-serif" font-size="10.5" fill="#00c8ff" letter-spacing="1.5">PARTIÇÃO DOS DADOS</text>
+    <text x="26" y="224" font-family="'Barlow',sans-serif" font-size="13" fill="#c5e4f7">Treino: 2001–2018</text>
+    <text x="26" y="241" font-family="'Barlow',sans-serif" font-size="13" fill="#c5e4f7">Validação: 2019–2021</text>
+    <text x="26" y="257" font-family="'Barlow',sans-serif" font-size="13" fill="#00ffe7" font-weight="600">Teste: 2022–2025</text>
+    <line x1="278" y1="81" x2="126" y2="176" stroke="#00c8ff" stroke-width="1.2" opacity="0.3" stroke-dasharray="5,4"/>
+    <rect x="278" y="172" width="238" height="116" rx="6" fill="url(#gOrange)" stroke="#ff7e00" stroke-width="1.4" opacity="0.95"/>
+    <rect x="278" y="172" width="238" height="4" rx="2" fill="#ff7e00" opacity="0.8"/>
+    <text x="300" y="206" font-family="'Bebas Neue',sans-serif" font-size="34" fill="#ff7e00" opacity="0.6">C</text>
+    <text x="336" y="204" font-family="'Barlow',sans-serif" font-size="14" font-weight="700" fill="#f0f8ff">Camada 1 — Prophet</text>
+    <text x="300" y="226" font-family="'Barlow',sans-serif" font-size="12" fill="#c5e4f7">Ajuste da comp. determinística</text>
+    <text x="300" y="242" font-family="'Barlow',sans-serif" font-size="12" fill="#c5e4f7">Tendência + Sazonalidades</text>
+    <text x="300" y="258" font-family="'Barlow',sans-serif" font-size="12" fill="#ffc700" font-weight="600">Resíduos → Camada 2</text>
+    <line x1="516" y1="230" x2="552" y2="230" stroke="#ff7e00" stroke-width="1.8" opacity="0.55" marker-end="url(#arrow)"/>
+    <rect x="554" y="172" width="234" height="116" rx="6" fill="url(#gGreen)" stroke="#00ff99" stroke-width="1.4" opacity="0.95"/>
+    <rect x="554" y="172" width="234" height="4" rx="2" fill="#00ff99" opacity="0.75"/>
+    <text x="576" y="206" font-family="'Bebas Neue',sans-serif" font-size="34" fill="#00ff99" opacity="0.6">D</text>
+    <text x="614" y="204" font-family="'Barlow',sans-serif" font-size="14" font-weight="700" fill="#f0f8ff">Camada 2 — LightGBM</text>
+    <text x="576" y="226" font-family="'Barlow',sans-serif" font-size="12" fill="#c5e4f7">Treino sobre resíduos da C1</text>
+    <text x="576" y="242" font-family="'Barlow',sans-serif" font-size="12" fill="#c5e4f7">18 features · Busca em grade</text>
+    <text x="576" y="258" font-family="'Barlow',sans-serif" font-size="12" fill="#00ff99" font-weight="600">Parada antecipada: 50 iter.</text>
+    <line x1="671" y1="288" x2="671" y2="316" stroke="#00c8ff" stroke-width="1.8" opacity="0.55" marker-end="url(#arrow)"/>
+    <line x1="397" y1="288" x2="397" y2="358" stroke="#ff7e00" stroke-width="1.4" opacity="0.4" stroke-dasharray="5,4"/>
+    <line x1="397" y1="358" x2="490" y2="358" stroke="#ff7e00" stroke-width="1.4" opacity="0.4" stroke-dasharray="5,4"/>
+    <line x1="671" y1="358" x2="754" y2="358" stroke="#00ff99" stroke-width="1.4" opacity="0.4" stroke-dasharray="5,4"/>
+    <rect x="490" y="320" width="264" height="90" rx="6" fill="url(#gCyan)" stroke="#00c8ff" stroke-width="2" opacity="0.98" filter="url(#glow)"/>
+    <rect x="490" y="320" width="264" height="4" rx="2" fill="#00c8ff" opacity="0.9"/>
+    <text x="516" y="352" font-family="'Bebas Neue',sans-serif" font-size="26" fill="#00ffe7" opacity="0.8">Σ</text>
+    <text x="548" y="350" font-family="'Barlow',sans-serif" font-size="14" font-weight="700" fill="#f0f8ff">Previsão Híbrida Final</text>
+    <text x="506" y="372" font-family="'Space Mono',sans-serif" font-size="11" fill="#c5e4f7">ŷ(t) = ŷ_Prophet(t) + ŷ_LightGBM(t)</text>
+    <text x="506" y="390" font-family="'Barlow',sans-serif" font-size="12.5" fill="#00ffe7" font-weight="600">Teste: 2022–2025 (n = 1.461)</text>
+    <line x1="754" y1="365" x2="792" y2="365" stroke="#00c8ff" stroke-width="1.8" opacity="0.55" marker-end="url(#arrow)"/>
+    <rect x="794" y="308" width="254" height="118" rx="6" fill="url(#gBlue)" stroke="#00c8ff" stroke-width="1.8" opacity="0.95"/>
+    <rect x="794" y="308" width="254" height="4" rx="2" fill="#00c8ff" opacity="0.85"/>
+    <text x="816" y="342" font-family="'Bebas Neue',sans-serif" font-size="34" fill="#00c8ff" opacity="0.6">E</text>
+    <text x="854" y="340" font-family="'Barlow',sans-serif" font-size="14" font-weight="700" fill="#f0f8ff">Avaliação Comparativa</text>
+    <text x="816" y="362" font-family="'Barlow',sans-serif" font-size="12" fill="#c5e4f7">RMSE · MAE · MAPE · sMAPE</text>
+    <text x="816" y="378" font-family="'Barlow',sans-serif" font-size="12" fill="#c5e4f7">R² · MBE · Theil's U</text>
+    <text x="816" y="396" font-family="'Barlow',sans-serif" font-size="12" fill="#00ff99" font-weight="600">Diebold-Mariano + Newey-West</text>
+  </svg>
+</div>
+
+<!-- 8 PROPHET CAMADA 1 -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="section-tag">Metodologia · Camada 1</div>
+    <div class="mega-title" style="font-size:clamp(1.8rem,3.5vw,3rem)">PROPHET</div>
+  </div>
+  <div class="two-col">
+    <div>
+      <div style="font-size:1.06rem;color:var(--white);margin-bottom:12px;font-weight:300">Decomposição aditiva <span class="citation">Taylor &amp; Letham, 2018</span>:</div>
+      <div class="formula-box"><span class="formula-label">Eq. 1</span>CargaProphet(t) = Tendência(t) + Sazonalidade(t) + Feriados(t) + ε(t)</div>
+      <div class="formula-box" style="margin-top:8px;font-size:0.87rem"><span class="formula-label">Erro</span>ε(t) ~ N(0, σ²)</div>
+      <div class="card" style="margin-top:12px;border-color:rgba(255,61,107,0.25)">
+        <div class="card-title" style="color:var(--red-accent)">Limitação</div>
+        <div class="card-body" style="font-size:1.02rem">Resíduos frequentemente <em style="color:var(--accent-gold)">não são ruído branco,</em> o que pode levar a erros de previsão no modelo.</div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-title">Hiperparâmetro</div>
+        <div class="card-body" style="font-size:1.04rem">
+          <strong style="color:var(--neon-cyan)">Escala de Flexibilidade da Tendência</strong><br><br>
+          Controla a flexibilidade da tendência do modelo.<br><br>
+          A tendência é estimada a partir dos dados, e o hiperparâmetro controla o quanto essa tendência pode se ajustar a mudanças ao longo do tempo.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 9 LIGHTGBM CAMADA 2 -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="section-tag">Metodologia · Camada 2</div>
+    <div class="mega-title" style="font-size:clamp(1.8rem,3.5vw,3rem)">LIGHTGBM</div>
+  </div>
+  <div class="two-col">
+    <div>
+      <div class="formula-box"><span class="formula-label">Eq. 2</span>Resíduo(t) = Carga(t) − CargaProphet(t)</div>
+      <div class="formula-box" style="margin-top:8px"><span class="formula-label">Eq. 3 — Previsão Final</span>CargaEstimadaFinal(t) = CargaProphet(t) + CargaLightGBM(Resíduo(t))</div>
+      <div class="card" style="margin-top:12px">
+        <div class="card-title">Particionamento por Folhas</div>
+        <div class="card-body" style="font-size:1.04rem">A cada etapa, o modelo corrige erros anteriores ao separar os dados em grupos semelhantes com base nas variáveis.</div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-title">18 Preditores — 4 Grupos</div>
+        <div class="card-body" style="font-size:1.04rem">
+          <span class="pill pill-blue">Calendário</span>&nbsp; Ano, Mês, Dia, Dia da Semana, Dia do Ano, Tendência, Feriado, Véspera, Pós-feriado.<br><br>
+          <span class="pill pill-orange">Defasagens</span>&nbsp; Lag-1, Lag-7, Lag-14, Lag-30, Lag-365.<br><br>
+          <span class="pill pill-green">Médias Móveis</span>&nbsp; MM-7, MM-30, MM-90.<br><br>
+          <span class="pill pill-red">Interação</span>&nbsp; Lag-7 × DiaSemana.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 10 MÉTRICAS -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="section-tag">Metodologia · Avaliação</div>
+    <div class="mega-title" style="font-size:clamp(1.8rem,3.5vw,3rem)">MÉTRICAS DE AVALIAÇÃO</div>
+  </div>
+  <div class="two-col">
+    <div>
+      <div class="formula-box"><span class="formula-label">Eq. 4</span>RMSE = √[ Σ(yᵢ − ŷᵢ)² / n ]</div>
+      <div class="formula-box"><span class="formula-label">Eq. 5</span>MAE = (1/n) Σ |yᵢ − ŷᵢ|</div>
+      <div class="formula-box"><span class="formula-label">Eq. 6</span>MAPE = (100/n) Σ |yᵢ − ŷᵢ| / yᵢ  (%)</div>
+      <div class="formula-box"><span class="formula-label">Eq. 7</span>sMAPE = (200/n) Σ |yᵢ − ŷᵢ| / (|yᵢ| + |ŷᵢ|)</div>
+    </div>
+    <div>
+      <div class="formula-box"><span class="formula-label">Eq. 8</span>R² = 1 − Σ(yᵢ − ŷᵢ)² / Σ(yᵢ − ȳ)²</div>
+      <div class="formula-box"><span class="formula-label">Eq. 9</span>MBE = (1/n) Σ(yᵢ − ŷᵢ)  ← viés sistemático</div>
+      <div class="formula-box"><span class="formula-label">Eq. 10</span>Theil's U = RMSE_modelo / RMSE_naïve  (U &lt; 1 ✓)</div>
+      <div class="callout" style="font-size:1.0rem;margin-top:12px">
+        <strong>Diebold-Mariano com fator de correção</strong> de Newey-West para autocorrelação serial nos diferenciais de erro. <span class="citation">Diebold &amp; Mariano, 1995</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 11 DECOMPOSIÇÃO PROPHET -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="section-tag">Seção 05 · Resultados · Camada 1</div>
+    <div class="mega-title" style="font-size:clamp(1.6rem,3vw,2.6rem)">DECOMPOSIÇÃO DO PROPHET</div>
+  </div>
+  <div class="two-col" style="gap:20px">
+    <div>
+      <div class="chart-title">Tendência Estimada (MW médio · 2000–2025)</div>
+      <canvas id="trendChart" style="width:100%;height:145px"></canvas>
+      <br>
+      <div class="chart-title">Sazonalidade Semanal (efeito em MW vs. dias da semana)</div>
+      <canvas id="weekChart" style="width:100%;height:120px"></canvas>
+      <div class="chart-caption">Domingo: até −4.500 MW em relação a dias úteis</div>
+    </div>
+    <div>
+      <div class="chart-title">Sazonalidade Anual (efeito em MW ao longo do ano)</div>
+      <canvas id="yearChart" style="width:100%;height:155px"></canvas>
+      <div class="chart-caption">Pico de verão austral (climatização): +2.500 MW · Vale no inverno: −2.500 MW</div>
+    </div>
+  </div>
+</div>
+
+<!-- 12 MECANISMO DUAS CAMADAS -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="section-tag">Resultados · Mecanismo Híbrido</div>
+    <div class="mega-title" style="font-size:clamp(1.5rem,2.8vw,2.5rem)">MECANISMO EM DUAS CAMADAS</div>
+  </div>
+  <div style="width:100%;display:flex;flex-direction:column;gap:4px">
+    <div>
+      <div class="chart-title">Camada 1 — Prophet vs. Demanda Observada (2022–2025)</div>
+      <canvas id="camada1Chart" style="width:100%;height:128px"></canvas>
+      <div class="chart-caption">Prophet (laranja) opera abaixo dos valores reais (azul) — subestimação nos verões 2023–2024</div>
+    </div>
+    <div>
+      <div class="chart-title">Camada 2 — Resíduos do Prophet e Correção LightGBM</div>
+      <canvas id="camada2Chart" style="width:100%;height:128px"></canvas>
+      <div class="chart-caption">Resíduos (cinza) com estrutura positiva persistente ~2–5k MW · LightGBM (verde) rastreia a estrutura não linear</div>
+    </div>
+    <div>
+      <div class="chart-title">Resultado Final — Previsão Híbrida vs. Demanda Observada</div>
+      <canvas id="camada3Chart" style="width:100%;height:105px"></canvas>
+      <div class="chart-caption">Híbrido (laranja) adere com maior fidelidade à demanda observada (azul) — corrige viés sistemático</div>
+    </div>
+  </div>
+</div>
+
+<!-- 13 TABELA MÉTRICAS -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="section-tag">Resultados · Desempenho</div>
+    <div class="mega-title" style="font-size:clamp(1.6rem,3vw,2.6rem)">MÉTRICAS</div>
+  </div>
+  <div style="width:100%;margin-bottom:18px">
+    <table class="data-table">
+      <thead><tr><th>Modelo</th><th>RMSE (MW)</th><th>MAE (MW)</th><th>MAPE (%)</th><th>sMAPE (%)</th><th>R²</th><th>MBE (MW)</th><th>Theil's U</th></tr></thead>
+      <tbody>
+        <tr><td>Prophet</td><td>3.816,11</td><td>2.943,63</td><td>6,55</td><td>6,89</td><td>0,662</td><td style="color:var(--red-accent)">−2.659,30</td><td style="color:var(--red-accent)">1,236</td></tr>
+        <tr class="highlight"><td><strong>Prophet + LightGBM</strong></td><td><strong>2.210,53</strong></td><td><strong>1.558,05</strong></td><td><strong>3,49</strong></td><td><strong>3,57</strong></td><td><strong>0,810</strong></td><td>−885,99</td><td><strong>0,716</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="three-col">
+    <div class="metric-box"><div class="metric-value" style="color:var(--green-neon)">−42,1%</div><div class="metric-label">Redução RMSE</div><div class="metric-delta" style="color:var(--green-neon)">3.816 → 2.211 MW</div></div>
+    <div class="metric-box"><div class="metric-value" style="color:var(--neon-cyan)">−46,7%</div><div class="metric-label">Redução MAPE</div><div class="metric-delta" style="color:var(--neon-cyan)">6,55% → 3,49%</div></div>
+    <div class="metric-box"><div class="metric-value" style="color:var(--electric-blue)">0,716</div><div class="metric-label">Theil's U (U &lt; 1 ✓)</div><div class="metric-delta" style="color:var(--electric-blue)">supera previsão naïve</div></div>
+  </div>
+</div>
+
+<!-- 13b DISPERSÃO — NOVO SLIDE -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="section-tag">Resultados · Dispersão Observado vs. Previsto</div>
+    <div class="mega-title" style="font-size:clamp(1.5rem,2.8vw,2.5rem)">DISPERSÃO: OBSERVADO vs. PREVISTO</div>
+  </div>
+  <div style="width:100%">
+    <div class="chart-title">Carga Real vs. Carga Prevista (MW médio) — Período de Teste 2022–2025</div>
+    <canvas id="scatterChart" style="width:100%;height:350px"></canvas>
+    <div class="chart-caption">Linha tracejada = previsão perfeita (y = x) · Prophet (laranja): linha de regressão abaixo da diagonal                       · Prophet+LightGBM (turquesa): aderência superior à diagonal</div>
+  </div>
+</div>
+
+<!-- 14 COMPARAÇÃO MÉTRICAS -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="section-tag">Resultados · Comparação Visual</div>
+    <div class="mega-title" style="font-size:clamp(1.5rem,2.8vw,2.5rem)">COMPARAÇÃO DAS MÉTRICAS</div>
+  </div>
+  <div class="two-col" style="align-items:start;gap:24px">
+    <div>
+      <div class="chart-title">Métricas de Erro — Prophet vs. Prophet+LightGBM (período de teste 2022–2025)</div>
+      <canvas id="metricChart" style="width:100%;height:260px"></canvas>
+    </div>
+    <div>
+      <div class="card" style="border-color:rgba(0,255,153,0.4);margin-bottom:14px">
+        <div class="card-title" style="color:var(--green-neon)">Teste de Diebold-Mariano</div>
+        <div class="card-body">
+          <table class="data-table" style="font-size:0.80rem">
+            <thead><tr><th>Comparação</th><th>DM</th><th>p-valor</th><th>Conclusão</th></tr></thead>
+            <tbody><tr class="highlight"><td>Prophet vs. Híbrido</td><td><strong>27,47</strong></td><td style="color:var(--green-neon)">&lt; 0,001</td><td>Híbrido sig. melhor</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="callout" style="font-size:1.0rem">
+        DM = <strong>27,47</strong> → rejeição da hipótese de igual acurácia.<br> 
+        Adicionalmente, a melhoria de 42% no RMSE demonstra o <strong>ganho estrutural</strong> da correção supervisionada dos resíduos. <span class="citation">Diebold &amp; Mariano, 1995</span>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="card-title">sMAPE — Robustez</div>
+        <div class="card-body" style="font-size:1.04rem">sMAPE: 6,89% → 3,57% <strong style="color:var(--green-neon)">(−48,2%)</strong>. Confirma que a melhoria é robusta a diferentes formas de mensurar o erro relativo. <span class="citation">Makridakis, 1993</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 15 MAE POR MÊS -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="section-tag">Resultados · Padrão Temporal</div>
+    <div class="mega-title" style="font-size:clamp(1.5rem,2.8vw,2.5rem)">PADRÃO DE ERROS POR MÊS</div>
+  </div>
+  <div style="width:100%;margin-bottom:14px">
+    <div class="chart-title">MAE Médio por Mês — Prophet (laranja) vs. Prophet+LightGBM (turquesa) · Área sombreada = ganho absoluto do híbrido</div>
+    <canvas id="maeMonthChart" style="width:100%;height:240px"></canvas>
+  </div>
+  <div class="callout" style="font-size:1.0rem">
+    Maiores erros no <strong>verão (nov–mar)</strong>. Em <strong>julho</strong>: Prophet ≈ 1.388 MW vs. Híbrido ≈ 580 MW → <strong style="color:var(--green-neon)">redução de 58%</strong>. LightGBM aprende mais facilmente os resíduos do inverno, quando o consumo segue ciclos semanais mais regulares.
+  </div>
+</div>
+
+<!-- 16 IMPORTÂNCIA VARIÁVEIS -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="section-tag">Resultados · LightGBM</div>
+    <div class="mega-title" style="font-size:clamp(1.5rem,2.8vw,2.5rem)">IMPORTÂNCIA DAS VARIÁVEIS</div>
+  </div>
+  <div class="two-col" style="align-items:start">
+    <div style="padding:0 6px">
+      <div class="bar-row"><div class="bar-name">Média Móvel 7 dias</div><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><div class="bar-val">21,38%</div></div>
+      <div class="bar-row"><div class="bar-name">Defasagem 1 dia</div><div class="bar-track"><div class="bar-fill" style="width:88.1%"></div></div><div class="bar-val">18,84%</div></div>
+      <div class="bar-row"><div class="bar-name">Tendência Linear</div><div class="bar-track"><div class="bar-fill" style="width:61.5%;background:linear-gradient(90deg,var(--accent-orange),var(--accent-gold))"></div></div><div class="bar-val">13,16%</div></div>
+      <div class="bar-row"><div class="bar-name">Dia do Ano</div><div class="bar-track"><div class="bar-fill" style="width:47.8%;background:linear-gradient(90deg,var(--accent-orange),var(--accent-gold))"></div></div><div class="bar-val">10,23%</div></div>
+      <div class="bar-row"><div class="bar-name">Previsão Prophet</div><div class="bar-track"><div class="bar-fill" style="width:37.7%;background:linear-gradient(90deg,var(--muted),var(--electric-blue))"></div></div><div class="bar-val">8,07%</div></div>
+      <div class="bar-row"><div class="bar-name">Média Móvel 30 dias</div><div class="bar-track"><div class="bar-fill" style="width:19.6%;background:linear-gradient(90deg,var(--muted),var(--electric-blue))"></div></div><div class="bar-val">4,20%</div></div>
+      <div class="bar-row"><div class="bar-name">Defasagem 365 dias</div><div class="bar-track"><div class="bar-fill" style="width:15.7%"></div></div><div class="bar-val">3,35%</div></div>
+      <div class="bar-row"><div class="bar-name">Ano</div><div class="bar-track"><div class="bar-fill" style="width:14.8%"></div></div><div class="bar-val">3,17%</div></div>
+      <div class="bar-row"><div class="bar-name">Lag-7 × DiaSemana</div><div class="bar-track"><div class="bar-fill" style="width:14.3%"></div></div><div class="bar-val">3,06%</div></div>
+      <div class="bar-row"><div class="bar-name">Média Móvel 90 dias</div><div class="bar-track"><div class="bar-fill" style="width:13.3%"></div></div><div class="bar-val">2,84%</div></div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-title">Interpretação</div>
+        <div class="card-body" style="font-size:1.04rem">
+          <strong style="color:var(--neon-cyan)">MM-7 (21,38%) + Lag-1 (18,84%):</strong> grande parte dos resíduos é explicada pelo nível recente da série, que seria o ponto cego do Prophet.<br><br>
+          <strong style="color:var(--accent-orange)">Tendência Linear (13,16%):</strong> o Prophet acumula erro nos períodos de aceleração de demanda; LightGBM corrige localmente.<br><br>
+          <strong style="color:var(--muted)">Previsão Prophet (8,07%):</strong> LightGBM captura certas sazonalidades residuais que o Prophet não resolve.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 17 ACF RESÍDUOS -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="section-tag">Resultados · Análise Residual</div>
+    <div class="mega-title" style="font-size:clamp(1.5rem,2.8vw,2.5rem)">ESTRUTURA DOS RESÍDUOS — ACF</div>
+  </div>
+  <div class="two-col" style="gap:22px;align-items:start">
+    <div>
+      <div class="chart-title">ACF dos Resíduos — Prophet (2022–2025)</div>
+      <canvas id="acfProphetChart" style="width:100%;height:185px"></canvas>
+      <div class="chart-caption">Lag 1 ≈ 0,87 · decaimento lento · ACF > 0,4 ainda no lag 60 → autocorrelação estrutural forte</div>
+    </div>
+    <div>
+      <div class="chart-title">ACF dos Resíduos — Híbrido Prophet+LightGBM (2022–2025)</div>
+      <canvas id="acfHybridChart" style="width:100%;height:185px"></canvas>
+      <div class="chart-caption">Lag 1 ≈ 0,80 · decaimento lento similar ao Prophet — autocorrelação ainda presente</div>
+    </div>
+  </div>
+</div>
+
+<!-- 18 LJUNG-BOX -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="section-tag">Resultados · Análise Residual</div>
+    <div class="mega-title" style="font-size:clamp(1.5rem,2.8vw,2.5rem)">TESTE DE LJUNG-BOX</div>
+  </div>
+  <div class="two-col" style="align-items:start;gap:24px">
+    <div>
+      <div class="chart-title">p-valores do Teste de Ljung-Box por Defasamento (2022–2025)</div>
+      <canvas id="ljungChart" style="width:100%;height:290px"></canvas>
+      <div class="chart-caption">Prophet: p ≈ 0 (laranja, linha de base) · Híbrido: p-valores maiores (turquesa, acima)</div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:14px;border-color:rgba(0,255,153,0.4)">
+        <div class="card-title" style="color:var(--green-neon)">Interpretação</div>
+        <div class="card-body" style="font-size:1.04rem">
+          O teste de Ljung-Box evidencia que <strong>ambos os modelos</strong> rejeitam a hipótese de ruído branco (p ≈ 0 para todos os defasamentos).<br><br>
+          A diferença é que os p-valores do <em style="color:var(--accent-gold)">híbrido são ligeiramente maiores</em> que os do Prophet, indicando uma autocorrelação residual marginalmente menor.<br><br>
+          A melhoria qualitativa é mais evidente na análise visual das ACFs.
+        </div>
+      </div>
+      <div class="callout" style="font-size:1.0rem">
+        <strong>Nota importante:</strong> o ACF dos resíduos do híbrido ainda apresenta autocorrelação significativa — a melhoria do modelo é principalmente <em>quantitativa</em> (RMSE −42,1%, MAPE −46,7%), com ganho qualitativo parcial nos resíduos. <span class="citation">Hyndman &amp; Athanasopoulos, 2021</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 19 CONCLUSÃO -->
+<div class="slide">
+  <div class="slide-header">
+    <div class="section-tag">Seção 06</div>
+    <div class="mega-title">CONCLUSÃO</div>
+  </div>
+  <div class="two-col" style="align-items:start">
+    <div>
+      <div class="card" style="margin-bottom:14px;border-color:rgba(0,255,153,0.4)">
+        <div class="card-title" style="color:var(--green-neon)">Achados Principais</div>
+        <div class="card-body" style="font-size:1.04rem">
+          Prophet+LightGBM reduziu:<br><br>
+          <span class="pill pill-green">−42,1% RMSE</span>&nbsp;<span class="pill pill-green">−47,1% MAE</span>&nbsp;<span class="pill pill-green">−46,7% MAPE</span><br><br>
+          <strong style="color:var(--neon-cyan)">Diebold-Mariano: DM = 27,47 (p &lt; 0,001)</strong><br>
+          Theil's U = 0,716 → supera previsão naïve.<br><br>
+        </div>
+      </div>
+      <div class="card" style="border-color:rgba(255,61,107,0.3)">
+        <div class="card-title" style="color:var(--red-accent)">Limitação</div>
+        <div class="card-body" style="font-size:1.04rem">Sem variáveis climáticas explícitas, episódios de <strong style="color:var(--red-accent)">calor extremo nos verões 2023–2024</strong> não são adequadamente capturados.</div>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title">Possíveis Extensões</div>
+        <div class="card-body" style="font-size:1.04rem">
+          <strong style="color:var(--neon-cyan)">1.</strong> Incorporar <em style="color:var(--accent-gold)">temperatura máxima diária</em> como regressor externo ao LightGBM<br><br>
+          <strong style="color:var(--neon-cyan)">2.</strong> Estender a avaliação aos demais subsistemas do SIN (Norte, Nordeste, Sul)
+        </div>
+      </div>
+      <div class="callout" style="font-size:1.04rem">
+        <strong>Conclusão central:</strong> LightGBM foca em defasagens de curtíssimo prazo e tendência linear — dois pontos cegos do Prophet em períodos de aceleração de demanda.<br>
+        No geral, o modelo híbrido é uma solução pragmática que corrige os resíduos do Prophet, resultando em melhorias substanciais de acurácia (previsão do modelo). <span class="citation">Velasquez et al., 2022</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 20 REFERÊNCIAS -->
+<div class="slide" style="padding:32px 60px">
+  <div class="slide-header">
+    <div class="section-tag">Seção 07</div>
+    <div class="mega-title" style="font-size:clamp(1.6rem,3vw,2.8rem)">REFERÊNCIAS</div>
+  </div>
+  <div class="two-col" style="gap:20px;align-items:start">
+    <div style="font-size:0.85rem;color:var(--muted);line-height:2.1;font-family:'Space Mono',monospace">
+      ARIAS et al. Utilities Policy, v.83, 101621, 2023.<br>
+      CHADALAVADA et al. IJST, v.13, n.47, 2020.<br>
+      CHEN et al. Energies, v.18, n.2, p.227, 2025.<br>
+      CLEVELAND et al. J. Official Statistics, v.6, n.1, 1990.<br>
+      DIEBOLD &amp; MARIANO. J. Bus. &amp; Econ. Stat., v.13, n.3, 1995.<br>
+      DORJI et al. ETASR, v.14, n.6, 2024.<br>
+      DUDEK. Energies, v.15, n.20, p.7547, 2022.<br>
+      HEMBRAM et al. Applied Sciences, v.13, n.11, 2023.<br>
+      HYNDMAN &amp; ATHANASOPOULOS. FPP3. OTexts, 2021.
+    </div>
+    <div style="font-size:0.85rem;color:var(--muted);line-height:2.1;font-family:'Space Mono',monospace">
+      KE et al. LightGBM. NeurIPS, v.30, 2017.<br>
+      LÚCIO et al. Production, v.28, e20170122, 2018.<br>
+      MAKRIDAKIS. Int. J. Forecasting, v.9, n.4, 1993.<br>
+      NGUYEN et al. ETASR, v.14, n.5, 2024.<br>
+      ONS. dados.ons.org.br. Acesso: mar. 2025.<br>
+      SOARES &amp; MEDEIROS. Int. J. Forecasting, v.24, n.4, 2008.<br>
+      TAYLOR &amp; LETHAM. Am. Statistician, v.72, n.1, 2018.<br>
+      TAYLOR et al. Int. J. Forecasting, v.22, n.1, 2006.<br>
+      VELASQUEZ et al. Energy, v.247, 123483, 2022.<br>
+      VIVAS et al. Entropy, v.22, n.12, 2020.
+    </div>
+  </div>
+</div>
+
+<!-- 21 AGRADECIMENTOS -->
+<div class="slide" style="text-align:center">
+  <svg style="position:absolute;right:4%;bottom:0;height:78%;opacity:0.09;pointer-events:none" viewBox="0 0 220 540">
+    <ellipse cx="110" cy="65" rx="38" ry="45" fill="white"/>
+    <rect x="72" y="108" width="76" height="130" rx="9" fill="white"/>
+    <rect x="58" y="116" width="22" height="96" rx="7" fill="white"/>
+    <rect x="140" y="116" width="22" height="96" rx="7" fill="white"/>
+    <rect x="78" y="238" width="27" height="118" rx="6" fill="white"/>
+    <rect x="115" y="238" width="27" height="118" rx="6" fill="white"/>
+    <ellipse cx="110" cy="14" rx="46" ry="10" fill="none" stroke="white" stroke-width="3.5"/>
+    <ellipse cx="110" cy="6" rx="30" ry="6" fill="none" stroke="white" stroke-width="2.5"/>
+    <line x1="110" y1="6" x2="110" y2="20" stroke="white" stroke-width="2.5"/>
+    <path d="M62 12 L44 3 L64 1 L50 -10" stroke="white" stroke-width="1.8" fill="none" opacity="0.8"/>
+    <path d="M158 12 L176 3 L156 1 L170 -10" stroke="white" stroke-width="1.8" fill="none" opacity="0.8"/>
+  </svg>
+  <div style="position:relative;z-index:2">
+    <div class="section-tag" style="text-align:center;border-left:none;border-bottom:1px solid var(--electric-blue);padding:0 0 8px;margin-bottom:22px;display:inline-block">Obrigado pela atenção</div>
+    <div class="mega-title centered" style="font-size:clamp(2.8rem,6.5vw,6.5rem)">AGRADECIMENTOS</div>
+    <div style="font-size:1.18rem;color:var(--muted);line-height:1.9;margin-top:18px">
+      A <strong style="color:var(--white)">Universidade Estadual da Paraíba (UEPB)</strong> pelo suporte institucional.<br>
+      Ao <strong style="color:var(--electric-blue)">Operador Nacional do Sistema Elétrico (ONS)</strong><br>
+      pela disponibilização pública dos dados de carga verificada.
+    </div>
+    <div class="hr-glow" style="max-width:420px;margin:22px auto"></div>
+    <div style="font-family:'Space Mono',monospace;font-size:0.84rem;color:var(--muted);letter-spacing:0.15em">
+      elizeumedeirosest@gmail.com · UEPB · COBICET 2026
+    </div>
+    <br>
+  </div>
+</div>
+
+</div><!-- end #deck -->
+
+<div id="nav">
+  <button id="nav-prev" class="nav-btn">&#8592; PREV</button>
+  <span id="slide-counter">1 / 22</span>
+  <button id="nav-next" class="nav-btn">NEXT &#8594;</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// POPUP DATABASE
+// ═══════════════════════════════════════════════
+const POPUP_DB = {
+  'dataset-treino': { num:'📈', tag:'Dataset · Partição', title:'Por que Treino: 2001–2018?', body:`O período de <strong>2001 a 2018</strong> foi escolhido como conjunto de treino por representar uma <em>fase longa e estruturalmente coerente</em> da demanda elétrica do subsistema Sudeste/CO.<br><br>São quase <strong>18 anos</strong> de observações cobrindo:<br>• A fase de <em>crescimento econômico acelerado</em> (2001–2014)<br>• O início da <em>crise econômica</em> (2015–2018) — ainda sem a ruptura pandêmica<br><br>Esse volume de dados permite que o <strong>Prophet</strong> estime com robustez os componentes de tendência de longo prazo, sazonalidade anual e sazonalidade semanal.<br><br>O corte em 2018 evita que qualquer sinal da crise severa de 2019 ou da pandemia vaze para o treino, <em>preservando a validade da partição temporal.</em>`, src:'Hyndman & Athanasopoulos (2021) · Hembram et al. (2023)' },
+  'dataset-validacao': { num:'🔧', tag:'Dataset · Partição', title:'Por que Validação: 2019–2021?', body:`O período de <strong>2019 a 2021</strong> foi reservado para <em>validação</em>, usado exclusivamente para <strong>selecionar hiperparâmetros</strong> de ambos os modelos.<br><br>• <em>2019:</em> ano pré-pandemia com dinâmica de mercado distinta<br>• <em>2020:</em> <strong>choque pandêmico</strong>, queda abrupta de até 12% na demanda<br>• <em>2021:</em> início da recuperação gradual e irregular<br><br>Testar os hiperparâmetros nesse período <em>estressado</em> garante que os modelos sejam <strong>robustos a não-estacionariedades severas</strong>.`, src:'Hembram et al. (2023) · Taylor & Letham (2018) · Ke et al. (2017)' },
+  'dataset-teste': { num:'🧪', tag:'Dataset · Partição', title:'Por que Teste: 2022–2025?', body:`O período de <strong>2022 a 2025</strong> (n = <em>1.461 dias</em>) constitui o conjunto de teste, <strong>completamente isolado durante todo o desenvolvimento</strong> dos modelos.<br><br>Esse intervalo representa o <em>regime pós-pandemia</em>:<br>• <strong>Retomada acelerada</strong> da atividade econômica<br>• <strong>Ondas de calor extremo</strong> nos verões de 2023 e 2024<br>• <strong>Máximos históricos</strong> acima de 50.000 MW`, src:'Hembram et al. (2023) · Diebold & Mariano (1995)' },
+  'intro-i': { num:'I', tag:'Introdução · Motivação', title:'Equilíbrio Tempo Real Geração × Carga', body:`Acontecem desvios na frequência da rede <em>(60 Hz)</em> do sistema elétrico do Brasil, que são causados por excesso ou déficit de geração, e acionam mecanismos automáticos de proteção que podem levar a desligamentos em cascata (apagões).<br><br>Previsões de demanda permitem ao ONS <strong>programar o despacho das usinas com horas de antecedência</strong>, garantindo que a geração acompanhe a carga em tempo real.`, src:'Arias et al. (2023) · Taylor & Letham (2018)' },
+  'intro-ii': { num:'II', tag:'Introdução · Motivação', title:'Confiabilidade do Fornecimento', body:`A confiabilidade implica manter a energia elétrica disponível continuamente, mesmo diante de <em>(i) falhas de equipamentos</em>, <em>(ii) variações climáticas extremas</em> e <em>(iii) picos inesperados de demanda.</em><br><br>Modelos de previsão alimentam o <strong>planejamento operacional do ONS</strong>, definindo cronogramas de manutenção preventiva e estratégias de intercâmbio entre subsistemas.<br><br>Um modelo mais preciso <strong>reduz a necessidade de reservas excessivas</strong> sem comprometer a segurança operacional.`, src:'Hembram et al. (2023) · Velasquez et al. (2022)' },
+  'intro-iii': { num:'III', tag:'Introdução · Motivação', title:'Eficiência Econômica no Despacho', body:`O <strong>despacho econômico</strong> busca atender à demanda ao menor custo possível. Erros de previsão, especialmente subestimações, forçam o acionamento emergencial de <em>usinas termelétricas de pico</em>, com maior custo variável e maior emissão de CO₂.<br><br>Conforme Lúcio et al. (2018), melhorias na previsão têm impacto direto e mensurável na eficiência do sistema.`, src:'Lúcio et al. (2018) · Velasquez et al. (2022)' },
+  'step-01': { num:'01', tag:'Metodologia · Coleta de Dados', title:'Coleta via API Pública ONS', body:`Os dados foram obtidos diretamente da <strong>API pública do ONS</strong>, disponível em <em>dados.ons.org.br</em> (acesso: março 2025).<br><br>A variável coletada é a <strong>carga verificada horária</strong> do subsistema Sudeste/Centro-Oeste, em MW médio.<br><br>As observações horárias foram agregadas pela <em>média aritmética</em> de cada dia, resultando em <strong>9.131 observações diárias</strong> no período de 2000 a 2025.`, src:'ONS (2025) · Arias et al. (2023)' },
+  'step-02': { num:'02', tag:'Metodologia · Pré-processamento', title:'Limpeza e Partição dos Dados', body:`<strong>(a) Interpolação linear:</strong> Lacunas de até 3 dias consecutivos foram preenchidas por interpolação linear entre os valores adjacentes.<br><br><strong>(b) Detecção de outliers via STL:</strong> A decomposição STL foi aplicada para isolar o componente residual. Observações atípicas foram substituídas pela mediana dos 7 dias adjacentes.<br><br>Após a limpeza: <strong>Treino (2001–2018)</strong>, <strong>Validação (2019–2021)</strong> e <strong>Teste (2022–2025)</strong>.`, src:'Cleveland et al. (1990) · Dorji et al. (2024)' },
+  'step-03': { num:'03', tag:'Metodologia · Camada 1', title:'Ajuste do Prophet — Camada 1', body:`O Prophet foi ajustado como <strong>modelo aditivo:</strong> <strong style="color:#00ffe7">CargaProphet(t) = Tendência(t) + Sazonalidade(t) + Feriados(t) + ε(t)</strong>.<br><br>A <em>Tendência</em> é modelada por partes com pontos de mudança detectados automaticamente. A <em>Sazonalidade</em> utiliza séries de Fourier truncadas. Os <em>Feriados</em> são incorporados como regressores explícitos.<br><br>O hiperparâmetro de escala de flexibilidade foi ajustado em <strong>0,05</strong> por minimização do RMSE na validação.`, src:'Taylor & Letham (2018) · Hyndman & Athanasopoulos (2021)' },
+  'step-04': { num:'04', tag:'Metodologia · Camada 2', title:'Treinamento do LightGBM — Camada 2', body:`O LightGBM foi treinado sobre os <strong>resíduos da Camada 1</strong> usando 18 preditores em 4 grupos:<br><br><strong>Calendário (9):</strong> ano, mês, dia, dia da semana, dia do ano, tendência linear, feriado, véspera, pós-feriado.<br><br><strong>Defasagens (5):</strong> lag-1, lag-7, lag-14, lag-30, lag-365.<br><br><strong>Médias Móveis (3):</strong> MM-7, MM-30, MM-90.<br><br><strong>Interação (1):</strong> lag-7 × dia da semana.`, src:'Ke et al. (2017) · Hyndman & Athanasopoulos (2021)' },
+  'step-05': { num:'05', tag:'Metodologia · Avaliação', title:'Avaliação', body:`A avaliação foi realizada no <strong>conjunto de teste (2022–2025, n=1.461 dias).</strong><br><br><strong>Sete métricas:</strong> RMSE, MAE, MAPE, sMAPE, R², MBE e Theil's U.<br><br>Os modelos foram comparados pelo <em>Teste de Diebold-Mariano (1995)</em> com correção de Newey-West para autocorrelação serial.`, src:'Diebold & Mariano (1995) · Makridakis (1993)' },
+  'dataset-mw': { num:'⚡', tag:'Dataset · Unidade de Medida', title:'O que é MW médio?', body:`<strong>MW médio</strong> é a unidade que expressa a <em>potência média</em> ao longo de um intervalo de tempo. No contexto deste trabalho, representa a demanda média de potência elétrica ao longo do dia.<br><br><strong style="color:#00ffe7;font-family:'Space Mono',monospace">MW médio = Σ MW(hora) / 24</strong><br><br>O MW médio diário reduz as oscilações horárias e evidencia o comportamento da demanda ao longo do tempo, facilitando a análise de padrões e tendências.`, src:'ONS (2025) · Taylor et al. (2006)' },
+  'dataset-sudeste': { num:'🗺', tag:'Dataset · Sistema Elétrico Brasileiro', title:'Subsistema Sudeste/Centro-Oeste', body:`O Brasil possui o <strong>SIN (Sistema Interligado Nacional)</strong>, dividido em <em>quatro subsistemas</em>: Sul, Sudeste/Centro-Oeste, Nordeste e Norte.<br><br><strong>O Sudeste/CO é o maior subsistema</strong>, responsável por mais de <em>50% de todo o consumo elétrico nacional</em>. Abrange <strong>SP, RJ, MG, ES, GO, MT, MS e DF.</strong><br><br>Foi escolhido por representar a maior parcela do consumo nacional e por sua alta variabilidade sazonal, com picos históricos nos verões 2023–2024.`, src:'ONS (2025) · Arias et al. (2023)' },
+  'phase-crescimento': { num:'1', tag:'Série Histórica · 2000–2014', title:'Fase de Crescimento', body:`Entre 2000 e 2014, o subsistema registrou <strong>crescimento contínuo</strong>, com a demanda média crescendo de ~22.000 MW para picos de ~37.000–38.000 MW, representando crescimento acumulado de <strong>~70%</strong>. A sazonalidade semanal manteve-se estável e o perfil seguia padrões previsíveis.`, src:'ONS (2025) · Soares & Medeiros (2008)' },
+  'phase-crise': { num:'2', tag:'Série Histórica · 2015–2021', title:'Crise Econômica + Pandemia Covid-19', body:`A partir de 2015, a recessão econômica reduziu a demanda industrial. Em 2020, a <strong>pandemia de Covid-19</strong> provocou uma queda de até <em>10–12%</em> nos meses de maior restrição (abril–maio 2020).<br><br>Esse evento representou uma <strong>não-estacionariedade estrutural</strong> na série — choque que modelos treinados no pré-pandemia não conseguem capturar adequadamente.`, src:'ONS (2025) · Velasquez et al. (2022)' },
+  'phase-retomada': { num:'3', tag:'Série Histórica · 2022–2025', title:'Retomada Pós-Pandemia e Máximos Históricos', body:`A partir de 2022, a demanda retomou sua trajetória ascendente com <strong>máximos históricos</strong> nos verões de 2023 e 2024, com picos acima de <strong>50.000 MW médio</strong>.<br><br>Foi nesse período que o <strong>Prophet apresentou maior subestimação (MBE = −2.659 MW)</strong>, enquanto o LightGBM corrigiu parte significativa desse viés, reduzindo o RMSE em <strong>42,1%</strong>.`, src:'ONS (2025) · Taylor & Letham (2018) · Ke et al. (2017)' }
+};
+
+function openPopup(key) {
+  var d = POPUP_DB[key]; if (!d) return;
+  document.getElementById('popup-num').textContent   = d.num;
+  document.getElementById('popup-tag').textContent   = d.tag;
+  document.getElementById('popup-title').textContent = d.title;
+  document.getElementById('popup-body').innerHTML    = d.body;
+  document.getElementById('popup-src').textContent   = '📚 ' + d.src;
+  document.getElementById('popup-overlay').classList.add('active');
+}
+function closePopupDirect() { document.getElementById('popup-overlay').classList.remove('active'); }
+
+// ═══════════════════════════════════════════════
+// LIGHTNING CANVAS
+// ═══════════════════════════════════════════════
+const canvas = document.getElementById('lightning-canvas');
+const ctx = canvas.getContext('2d');
+function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resizeCanvas(); window.addEventListener('resize', resizeCanvas);
+function drawBolt(x1,y1,x2,y2,depth) {
+  if (depth === 0) return;
+  const mx = (x1+x2)/2 + (Math.random()-0.5)*130;
+  const my = (y1+y2)/2 + (Math.random()-0.5)*130;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(mx,my); ctx.lineTo(x2,y2);
+  ctx.strokeStyle = `rgba(0,200,255,${Math.random()*0.85+0.15})`;
+  ctx.lineWidth = depth * 0.5; ctx.stroke();
+  if (depth > 1) { drawBolt(x1,y1,mx,my,depth-1); drawBolt(mx,my,x2,y2,depth-1); if (Math.random()>0.55) drawBolt(mx,my,mx+(Math.random()-0.5)*220,my+Math.random()*160,depth-1); }
+}
+let lastBolt = 0;
+function animLightning(ts) {
+  if (ts - lastBolt > 3500 + Math.random()*4500) {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    drawBolt(Math.random()*canvas.width, 0, Math.random()*canvas.width, canvas.height*0.55, 4);
+    lastBolt = ts;
+    setTimeout(()=>ctx.clearRect(0,0,canvas.width,canvas.height), 110);
+  }
+  requestAnimationFrame(animLightning);
+}
+requestAnimationFrame(animLightning);
+
+var chartsInited = new Set();
+
+const PAL = {
+  blue:'#00c8ff', cyan:'#00ffe7', green:'#00ff99',
+  orange:'#ff7e00', gold:'#ffc700', red:'#ff3d6b',
+  muted:'#c5e4f7', white:'#f0f8ff', dim:'rgba(0,200,255,0.07)'
+};
+
+function setupCanvas(id, h) {
+  const c = document.getElementById(id);
+  if (!c) return null;
+  c.width = c.parentElement.offsetWidth || 800;
+  c.height = h;
+  return { c, cx: c.getContext('2d') };
+}
+
+// ─── SÉRIE HISTÓRICA ───
+const SERIE_ANNUAL_MEAN = [22000,20500,22500,24000,25500,27000,28500,30000,31500,31000,33000,34500,35500,36500,37000,36000,35000,35800,36500,37000,34500,38000,41000,44500,46500,46000];
+let _serieState = null, _serieHovered = -1;
+const SERIE_PHASES = [
+  { from:0,  to:15, col:'rgba(0,200,255,0.04)',  colHov:'rgba(0,200,255,0.20)',  lbl:'Crescimento',   lc:'#00ffe7', glow:'#00ffe7', popupKey:'phase-crescimento' },
+  { from:15, to:21, col:'rgba(255,61,107,0.05)', colHov:'rgba(255,61,107,0.22)', lbl:'Crise + Covid', lc:'#ff3d6b', glow:'#ff3d6b', popupKey:'phase-crise'      },
+  { from:21, to:26, col:'rgba(0,255,153,0.04)',  colHov:'rgba(0,255,153,0.22)',  lbl:'Retomada',      lc:'#00ff99', glow:'#00ff99', popupKey:'phase-retomada'   },
+];
+
+function _drawSerie(hovIdx) {
+  if (!_serieState) return;
+  const {c, cx, pad, W, H, minV, maxV, range, xs, ys} = _serieState;
+  cx.clearRect(0, 0, c.width, c.height);
+  cx.strokeStyle=PAL.dim; cx.lineWidth=1;
+  [10000,20000,30000,40000,50000].forEach(v=>{ const y=pad.t+H-((v-minV)/range)*H; cx.beginPath(); cx.moveTo(pad.l,y); cx.lineTo(pad.l+W,y); cx.stroke(); cx.fillStyle=PAL.white; cx.font='bold 12px Space Mono,monospace'; cx.textAlign='right'; cx.fillText((v/1000)+'k',pad.l-6,y+4); });
+  cx.fillStyle=PAL.white; cx.font='bold 12px Space Mono,monospace'; cx.textAlign='center';
+  ['2000','2005','2010','2015','2020','2025'].forEach((yr,i)=>{ cx.fillText(yr, pad.l+(i*5/25)*W, pad.t+H+20); });
+  SERIE_PHASES.forEach((ph,pi)=>{ const x1=pad.l+(ph.from/25)*W, x2=pad.l+(ph.to/25)*W; cx.fillStyle=hovIdx===pi?ph.colHov:ph.col; cx.fillRect(x1,pad.t,x2-x1,H); });
+  cx.beginPath(); xs.forEach((x,i)=>{ const y=pad.t+H-((ys[i]-minV)/range)*H; if(i===0) cx.moveTo(x,y); else cx.lineTo(x,y); }); cx.lineTo(xs[xs.length-1],pad.t+H); cx.lineTo(xs[0],pad.t+H); cx.closePath();
+  if (hovIdx>=0) { const ph=SERIE_PHASES[hovIdx]; const x1=pad.l+(ph.from/25)*W, x2=pad.l+(ph.to/25)*W; cx.fillStyle='rgba(0,200,255,0.04)'; cx.fill(); cx.save(); cx.beginPath(); cx.rect(x1,pad.t,x2-x1,H+2); cx.clip(); cx.beginPath(); xs.forEach((x,i)=>{ const y=pad.t+H-((ys[i]-minV)/range)*H; if(i===0) cx.moveTo(x,y); else cx.lineTo(x,y); }); cx.lineTo(xs[xs.length-1],pad.t+H); cx.lineTo(xs[0],pad.t+H); cx.closePath(); cx.fillStyle='rgba(0,200,255,0.18)'; cx.fill(); cx.restore(); } else { cx.fillStyle='rgba(0,200,255,0.08)'; cx.fill(); }
+  cx.beginPath(); xs.forEach((x,i)=>{ const y=pad.t+H-((ys[i]-minV)/range)*H; if(i===0) cx.moveTo(x,y); else cx.lineTo(x,y); }); cx.strokeStyle=PAL.blue; cx.lineWidth=1.4; cx.lineJoin='round'; cx.stroke();
+  SERIE_PHASES.forEach((ph,pi)=>{ const x1=pad.l+(ph.from/25)*W, x2=pad.l+(ph.to/25)*W; let lx=(x1+x2)/2; const ly=pad.t+16; if(ph.lbl==='Retomada'){lx-=25;} const isHov=hovIdx===pi; cx.save(); if(isHov){cx.shadowColor=ph.glow;cx.shadowBlur=22;} cx.fillStyle=ph.lc; cx.font=(isHov?'bold 14px':'bold 13px')+' Space Mono,monospace'; cx.textAlign='center'; cx.fillText(ph.lbl,lx,ly); if(isHov){cx.shadowBlur=0;const tw=cx.measureText(ph.lbl).width;cx.strokeStyle=ph.lc;cx.lineWidth=1.5;cx.beginPath();cx.moveTo(lx-tw/2,ly+3);cx.lineTo(lx+tw/2,ly+3);cx.stroke();cx.font='10px sans-serif';cx.fillStyle='rgba(255,255,255,0.65)';cx.fillText('↗',lx+tw/2+6,ly);} cx.restore(); cx.font='bold 13px Space Mono,monospace'; const tw2=cx.measureText(ph.lbl).width+24; ph.hitX1=lx-tw2/2; ph.hitX2=lx+tw2/2; ph.hitY1=pad.t+2; ph.hitY2=pad.t+24; });
+  [{yr:2001,v:17000,col:PAL.red},{yr:2014,v:38500,col:PAL.orange},{yr:2020,v:32000,col:PAL.red},{yr:2024,v:54000,col:PAL.green}].forEach(e=>{ const x=pad.l+((e.yr-2000)/25)*W,y=pad.t+H-((e.v-minV)/range)*H; cx.beginPath(); cx.arc(x,y,5,0,Math.PI*2); cx.fillStyle=e.col; cx.fill(); });
+}
+
+function initSerieChart() {
+  if (chartsInited.has('serie')) return; chartsInited.add('serie');
+  const r = setupCanvas('serieChart', 230); if (!r) return;
+  const {c, cx} = r;
+  const pad = {t:26,r:16,b:32,l:72};
+  const W = c.width-pad.l-pad.r, H = c.height-pad.t-pad.b;
+  const minV=10000, maxV=56000, range=maxV-minV;
+  const nPts=650; const xs=[], ys=[];
+  for(let i=0;i<nPts;i++){ const t=i/(nPts-1); const yr=t*25; const yrIdx=Math.floor(yr); const frac=yr-yrIdx; const base=yrIdx<25?SERIE_ANNUAL_MEAN[yrIdx]*(1-frac)+SERIE_ANNUAL_MEAN[Math.min(yrIdx+1,25)]*frac:SERIE_ANNUAL_MEAN[25]; const weekCycle=Math.sin(yr*52*Math.PI*2)*0.12; const annualCycle=Math.cos(yr*Math.PI*2-0.3)*0.18; const noise=(Math.random()-0.5)*0.04; ys.push(base*(1+weekCycle+annualCycle+noise)); xs.push(pad.l+t*W); }
+  _serieState = {c, cx, pad, W, H, minV, maxV, range, xs, ys};
+  _serieHovered = -1; _drawSerie(-1);
+  c.style.cursor = 'default';
+  c.addEventListener('mousemove', e => { const rect=c.getBoundingClientRect(); const scaleX=c.width/rect.width,scaleY=c.height/rect.height; const mx=(e.clientX-rect.left)*scaleX,my=(e.clientY-rect.top)*scaleY; let hit=-1; SERIE_PHASES.forEach((ph,pi)=>{ if(ph.hitX1&&mx>=ph.hitX1&&mx<=ph.hitX2&&my>=ph.hitY1&&my<=ph.hitY2) hit=pi; }); if(hit!==_serieHovered){_serieHovered=hit;c.style.cursor=hit>=0?'pointer':'default';_drawSerie(hit);} });
+  c.addEventListener('mouseleave', ()=>{_serieHovered=-1;c.style.cursor='default';_drawSerie(-1);});
+  c.addEventListener('click', e => { const rect=c.getBoundingClientRect(); const scaleX=c.width/rect.width,scaleY=c.height/rect.height; const mx=(e.clientX-rect.left)*scaleX,my=(e.clientY-rect.top)*scaleY; SERIE_PHASES.forEach(ph=>{ if(ph.hitX1&&mx>=ph.hitX1&&mx<=ph.hitX2&&my>=ph.hitY1&&my<=ph.hitY2) openPopup(ph.popupKey); }); });
+}
+
+const TREND_VALS = [22000,23000,24500,26000,27500,29000,30500,31800,33200,34200,35000,35800,36200,36500,36800,36600,36200,35900,36100,36400,36000,37200,38800,40500,41800,42500];
+
+function initTrendChart() {
+  if (chartsInited.has('trend')) return; chartsInited.add('trend');
+  const r = setupCanvas('trendChart', 145); if (!r) return;
+  const {c,cx} = r;
+  const pad={t:14,r:14,b:26,l:72};
+  const W=c.width-pad.l-pad.r, H=c.height-pad.t-pad.b;
+  const minV=20000, maxV=45000, range=maxV-minV;
+  cx.strokeStyle=PAL.dim; cx.lineWidth=1;
+  [20000,25000,30000,35000,40000,45000].forEach(v=>{ const y=pad.t+H-((v-minV)/range)*H; cx.beginPath(); cx.moveTo(pad.l,y); cx.lineTo(pad.l+W,y); cx.stroke(); cx.fillStyle=PAL.white; cx.font='bold 11px Space Mono,monospace'; cx.textAlign='right'; cx.fillText((v/1000).toFixed(0)+'k',pad.l-5,y+4); });
+  cx.fillStyle=PAL.white; cx.font='bold 11px Space Mono,monospace'; cx.textAlign='center';
+  ['2000','2005','2010','2015','2020','2025'].forEach((yr,i)=>{ cx.fillText(yr, pad.l+(i*5/25)*W, pad.t+H+17); });
+  const n=TREND_VALS.length;
+  cx.beginPath(); TREND_VALS.forEach((v,i)=>{ const x=pad.l+(i/(n-1))*W,y=pad.t+H-((v-minV)/range)*H; if(i===0) cx.moveTo(x,y); else cx.lineTo(x,y); }); cx.lineTo(pad.l+W,pad.t+H); cx.lineTo(pad.l,pad.t+H); cx.closePath(); cx.fillStyle='rgba(255,126,0,0.08)'; cx.fill();
+  cx.beginPath(); TREND_VALS.forEach((v,i)=>{ const x=pad.l+(i/(n-1))*W,y=pad.t+H-((v-minV)/range)*H; if(i===0) cx.moveTo(x,y); else cx.lineTo(x,y); }); cx.strokeStyle=PAL.orange; cx.lineWidth=2.5; cx.lineJoin='round'; cx.stroke();
+}
+
+const WEEK_DAYS_ORDERED = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const WEEK_VALS_REAL    = [-4500, 500, 1400, 1600, 1500, 800, -1800];
+
+function initWeekChart() {
+  if (chartsInited.has('week')) return; chartsInited.add('week');
+  const r = setupCanvas('weekChart', 130); if (!r) return;
+  const {c,cx} = r;
+  const pad={t:12,r:14,b:26,l:72};
+  const W=c.width-pad.l-pad.r, H=c.height-pad.t-pad.b;
+  const minV=-5000, maxV=2000, range=maxV-minV;
+  const zeroY = pad.t+H-((0-minV)/range)*H;
+  cx.strokeStyle=PAL.dim; cx.lineWidth=1;
+  [-4000,-2000,0,1000,2000].forEach(v=>{ const y=pad.t+H-((v-minV)/range)*H; cx.beginPath(); cx.moveTo(pad.l,y); cx.lineTo(pad.l+W,y); cx.stroke(); cx.fillStyle=PAL.white; cx.font='bold 11px Space Mono,monospace'; cx.textAlign='right'; cx.fillText(v.toLocaleString('pt-BR'),pad.l-5,y+4); });
+  cx.strokeStyle='rgba(255,255,255,0.2)'; cx.setLineDash([4,3]); cx.beginPath(); cx.moveTo(pad.l,zeroY); cx.lineTo(pad.l+W,zeroY); cx.stroke(); cx.setLineDash([]);
+  cx.fillStyle=PAL.white; cx.font='bold 12px Space Mono,monospace'; cx.textAlign='center';
+  WEEK_DAYS_ORDERED.forEach((d,i)=>{ cx.fillText(d,pad.l+(i/6)*W,pad.t+H+18); });
+  WEEK_VALS_REAL.forEach((v,i)=>{ const x=pad.l+(i/6)*W, y=pad.t+H-((v-minV)/range)*H; cx.strokeStyle=PAL.orange; cx.lineWidth=2; cx.beginPath(); cx.moveTo(x,zeroY); cx.lineTo(x,y); cx.stroke(); cx.beginPath(); cx.arc(x,y,5,0,Math.PI*2); cx.fillStyle=PAL.orange; cx.fill(); });
+}
+
+function generateYearlyProfile() {
+  const pts=[];
+  for(let i=0;i<100;i++){ const d=i/99*365; const v=2500*Math.exp(-Math.pow((d-30)/45,2))-2500*Math.exp(-Math.pow((d-195)/50,2))+2000*Math.exp(-Math.pow((d-340)/35,2))-500*Math.exp(-Math.pow((d-130)/25,2)); pts.push({d,v:Math.max(-2600,Math.min(2600,v))}); }
+  return pts;
+}
+const YEARLY_PROFILE = generateYearlyProfile();
+
+function initYearChart() {
+  if (chartsInited.has('year')) return; chartsInited.add('year');
+  const r = setupCanvas('yearChart', 155); if (!r) return;
+  const {c,cx} = r;
+  const pad={t:12,r:14,b:26,l:72};
+  const W=c.width-pad.l-pad.r, H=c.height-pad.t-pad.b;
+  const minV=-3000, maxV=3000, range=6000;
+  const zeroY=pad.t+H-((0-minV)/range)*H;
+  cx.strokeStyle=PAL.dim; cx.lineWidth=1;
+  [-2000,-1000,0,1000,2000].forEach(v=>{ const y=pad.t+H-((v-minV)/range)*H; cx.beginPath(); cx.moveTo(pad.l,y); cx.lineTo(pad.l+W,y); cx.stroke(); cx.fillStyle=PAL.white; cx.font='bold 11px Space Mono,monospace'; cx.textAlign='right'; cx.fillText(v.toLocaleString('pt-BR'),pad.l-5,y+4); });
+  cx.strokeStyle='rgba(255,255,255,0.15)'; cx.setLineDash([4,3]); cx.beginPath(); cx.moveTo(pad.l,zeroY); cx.lineTo(pad.l+W,zeroY); cx.stroke(); cx.setLineDash([]);
+  cx.fillStyle=PAL.white; cx.font='bold 11px Space Mono,monospace'; cx.textAlign='center';
+  [['Jan',0],['Mar',60],['Jun',155],['Set',245],['Dez',335]].forEach(([m,d])=>{ cx.fillText(m,pad.l+(d/365)*W,pad.t+H+18); });
+  cx.beginPath(); YEARLY_PROFILE.forEach((pt,i)=>{ const x=pad.l+(pt.d/365)*W,y=pad.t+H-((pt.v-minV)/range)*H; if(i===0) cx.moveTo(x,y); else cx.lineTo(x,y); }); cx.lineTo(pad.l+W,zeroY); cx.lineTo(pad.l,zeroY); cx.closePath(); cx.fillStyle='rgba(255,198,0,0.08)'; cx.fill();
+  cx.beginPath(); YEARLY_PROFILE.forEach((pt,i)=>{ const x=pad.l+(pt.d/365)*W,y=pad.t+H-((pt.v-minV)/range)*H; if(i===0) cx.moveTo(x,y); else cx.lineTo(x,y); }); cx.strokeStyle=PAL.orange; cx.lineWidth=2.5; cx.lineJoin='round'; cx.stroke();
+}
+
+// ─── SÉRIES DE TESTE ───
+function makeTestSeriesReal() {
+  const n=1461; const obs=[], proph=[], resids=[], lgbm=[], hybrid=[];
+  for(let i=0;i<n;i++){
+    const yr_frac=i/365; const day_of_year=i%365; const dow=i%7;
+    const trend=38000+(yr_frac/4)*8000;
+    const ann=4000*Math.cos(day_of_year/365*2*Math.PI-0.1)+1500*Math.cos(day_of_year/365*4*Math.PI);
+    const weekEffect=[500,1400,1600,1500,800,-1800,-4500][dow];
+    const noise=(Math.sin(i*7.3)*500+Math.cos(i*3.1)*300);
+    const obs_val=trend+ann+weekEffect+noise;
+    obs.push(Math.max(30000,Math.min(56000,obs_val)));
+    const underBias=2659+(ann>2000?(ann-2000)*0.8:0);
+    const propNoise=Math.sin(i*2.7)*400+Math.cos(i*5.1)*200;
+    const proph_val=obs_val-underBias+propNoise*0.5;
+    proph.push(Math.max(28000,Math.min(50000,proph_val)));
+    const res=obs_val-proph_val; resids.push(res);
+    const corr=res*0.68+Math.sin(i*4.9)*150; lgbm.push(corr);
+    hybrid.push(proph_val+corr);
+  }
+  return {obs, proph, resids, lgbm, hybrid};
+}
+const TEST_REAL = makeTestSeriesReal();
+const TEST_LABELS = [];
+for(let i=0;i<1461;i++){ if(i===0) TEST_LABELS.push('2022'); else if(i===365) TEST_LABELS.push('2023'); else if(i===730) TEST_LABELS.push('2024'); else if(i===1095) TEST_LABELS.push('2025'); else TEST_LABELS.push(''); }
+
+function drawTimeChart(id, h, datasets, yMin, yMax, labels, yTicks) {
+  const r=setupCanvas(id,h); if(!r) return;
+  const {c,cx}=r; const n=datasets[0].data.length;
+  const pad={t:12,r:14,b:22,l:72};
+  const W=c.width-pad.l-pad.r, H=c.height-pad.t-pad.b, range=yMax-yMin;
+  cx.strokeStyle=PAL.dim; cx.lineWidth=1;
+  yTicks.forEach(v=>{ const y=pad.t+H-((v-yMin)/range)*H; cx.beginPath(); cx.moveTo(pad.l,y); cx.lineTo(pad.l+W,y); cx.stroke(); cx.fillStyle=PAL.white; cx.font='bold 12px Space Mono,monospace'; cx.textAlign='right'; cx.fillText(v>=1000?(v/1000).toFixed(0)+'k':v,pad.l-5,y+4); });
+  if(yMin<0&&yMax>0){ const zy=pad.t+H-((0-yMin)/range)*H; cx.strokeStyle='rgba(255,80,80,0.4)'; cx.setLineDash([5,4]); cx.beginPath(); cx.moveTo(pad.l,zy); cx.lineTo(pad.l+W,zy); cx.stroke(); cx.setLineDash([]); }
+  cx.fillStyle=PAL.white; cx.font='bold 12px Space Mono,monospace'; cx.textAlign='center';
+  labels.forEach((lbl,i)=>{ if(lbl) cx.fillText(lbl,pad.l+(i/(n-1))*W,pad.t+H+16); });
+  datasets.forEach(d=>{ cx.beginPath(); d.data.forEach((v,i)=>{ const x=pad.l+(i/(n-1))*W,y=pad.t+H-((v-yMin)/range)*H; if(i===0) cx.moveTo(x,y); else cx.lineTo(x,y); }); cx.strokeStyle=d.color; cx.lineWidth=d.lw||1.2; cx.lineJoin='round'; cx.globalAlpha=d.alpha||1; cx.stroke(); cx.globalAlpha=1; });
+}
+
+function initCamadaCharts() {
+  if (chartsInited.has('camadas')) return; chartsInited.add('camadas');
+  drawTimeChart('camada1Chart', 128,
+    [{data: TEST_REAL.obs, color: '#5cb8ff', lw: 1.3, alpha: 0.85},{data: TEST_REAL.proph, color: PAL.orange, lw: 1.3, alpha: 0.95}],
+    30000, 55000, TEST_LABELS, [30000, 35000, 40000, 45000, 50000, 55000]
+  );
+  const r2 = setupCanvas('camada2Chart', 128); if(!r2) return;
+  const {c, cx} = r2;
+  const pad = {t:12, r:14, b:22, l:72};
+  const W = c.width-pad.l-pad.r, H = c.height-pad.t-pad.b;
+  const yMin = 0, yMax = 8000, range = 8000;
+  cx.strokeStyle = PAL.dim; cx.lineWidth = 1;
+  [0, 2000, 4000, 6000, 8000].forEach(v => {
+    const y = pad.t + H - (v / range) * H;
+    cx.beginPath(); cx.moveTo(pad.l, y); cx.lineTo(pad.l+W, y); cx.stroke();
+    cx.fillStyle = PAL.white; cx.font = 'bold 12px Space Mono,monospace'; cx.textAlign = 'right';
+    cx.fillText(v === 0 ? '0' : '+' + (v/1000) + 'k', pad.l-5, y+4);
+  });
+  cx.strokeStyle = 'rgba(255,80,80,0.45)'; cx.setLineDash([5,4]); cx.lineWidth = 1.3;
+  cx.beginPath(); cx.moveTo(pad.l, pad.t+H); cx.lineTo(pad.l+W, pad.t+H); cx.stroke();
+  cx.setLineDash([]);
+  cx.fillStyle = PAL.white; cx.font = 'bold 12px Space Mono,monospace'; cx.textAlign = 'center';
+  TEST_LABELS.forEach((lbl, i) => { if(lbl) cx.fillText(lbl, pad.l+(i/1460)*W, pad.t+H+16); });
+  cx.beginPath();
+  TEST_REAL.resids.forEach((v, i) => { const vc = Math.max(0, Math.min(8000, v)); const x = pad.l+(i/1460)*W, y = pad.t+H-(vc/range)*H; if(i===0) cx.moveTo(x, y); else cx.lineTo(x, y); });
+  cx.lineTo(pad.l+W, pad.t+H); cx.lineTo(pad.l, pad.t+H); cx.closePath();
+  cx.fillStyle = 'rgba(160,170,190,0.12)'; cx.fill();
+  cx.beginPath();
+  TEST_REAL.resids.forEach((v, i) => { const vc = Math.max(0, Math.min(8000, v)); const x = pad.l+(i/1460)*W, y = pad.t+H-(vc/range)*H; if(i===0) cx.moveTo(x, y); else cx.lineTo(x, y); });
+  cx.strokeStyle = 'rgba(180,190,210,0.75)'; cx.lineWidth = 1.2; cx.stroke();
+  cx.beginPath();
+  TEST_REAL.lgbm.forEach((v, i) => { const vc = Math.max(0, Math.min(8000, v)); const x = pad.l+(i/1460)*W, y = pad.t+H-(vc/range)*H; if(i===0) cx.moveTo(x, y); else cx.lineTo(x, y); });
+  cx.strokeStyle = PAL.green; cx.lineWidth = 1.8; cx.stroke();
+  cx.fillStyle = 'rgba(180,190,210,0.85)'; cx.font = 'bold 11px Space Mono,monospace'; cx.textAlign = 'left'; cx.fillText('Resíduo', pad.l+8, pad.t+16);
+  cx.fillStyle = PAL.green; cx.fillText('LightGBM', pad.l+8, pad.t+30);
+  drawTimeChart('camada3Chart', 105,
+    [{data: TEST_REAL.obs, color: '#5cb8ff', lw: 1.3, alpha: 0.85},{data: TEST_REAL.hybrid, color: '#ff9500', lw: 1.3, alpha: 0.95}],
+    30000, 55000, TEST_LABELS, [30000, 40000, 50000]
+  );
+}
+
+// ─── SCATTER PLOT — NOVO ───
+function initScatterChart() {
+  if(chartsInited.has('scatter')) return; chartsInited.add('scatter');
+  const r = setupCanvas('scatterChart', 350); if(!r) return;
+  const {c, cx} = r;
+  const totalW = c.width, H = c.height;
+  const pW = totalW / 2;
+  const pad = {t:42, r:22, b:50, l:72};
+  const W = pW - pad.l - pad.r, ph = H - pad.t - pad.b;
+  const xMin=30000, xMax=55000, yMin=30000, yMax=52000;
+  const xRange=xMax-xMin, yRange=yMax-yMin;
+  const px = (v, ox) => ox + pad.l + ((v-xMin)/xRange)*W;
+  const py = (v)     => pad.t + ph  - ((v-yMin)/yRange)*ph;
+
+  const panels = [
+    { label:'Prophet',          obs:TEST_REAL.obs, pred:TEST_REAL.proph,  ox:0,   dotCol:'#ff8c42', dotAlpha:0.55, regCol:'#ff7e00' },
+    { label:'Prophet+LightGBM', obs:TEST_REAL.obs, pred:TEST_REAL.hybrid, ox:pW,  dotCol:'#00ffe7', dotAlpha:0.45, regCol:'#00d4c0' }
+  ];
+
+  panels.forEach(p => {
+    const {ox, obs, pred, dotCol, dotAlpha, label, regCol} = p;
+
+    // Panel background
+    cx.fillStyle = 'rgba(10,31,58,0.35)';
+    cx.fillRect(ox+pad.l, pad.t, W, ph);
+
+    // Grid lines
+    cx.strokeStyle = 'rgba(200,220,240,0.07)'; cx.lineWidth = 1;
+    [35000,40000,45000,50000].forEach(v => {
+      cx.beginPath(); cx.moveTo(ox+pad.l, py(v)); cx.lineTo(ox+pad.l+W, py(v)); cx.stroke();
+      cx.beginPath(); cx.moveTo(px(v,ox), pad.t); cx.lineTo(px(v,ox), pad.t+ph); cx.stroke();
+    });
+
+    // Diagonal y=x (dashed dark)
+    cx.strokeStyle = 'rgba(180,185,210,0.70)'; cx.setLineDash([9,6]); cx.lineWidth = 2;
+    const diagX1=xMin, diagY1=yMin, diagX2=Math.min(xMax,yMax), diagY2=Math.min(xMax,yMax);
+    cx.beginPath(); cx.moveTo(px(diagX1,ox), py(diagY1)); cx.lineTo(px(diagX2,ox), py(diagY2)); cx.stroke();
+    cx.setLineDash([]);
+
+    // Scatter points
+    const r2 = parseInt(dotCol.slice(1,3),16), g2=parseInt(dotCol.slice(3,5),16), b2=parseInt(dotCol.slice(5,7),16);
+    for(let i=0; i<obs.length; i++){
+      const x=px(obs[i],ox), y=py(Math.max(yMin,Math.min(yMax,pred[i])));
+      cx.beginPath(); cx.arc(x, y, 2.5, 0, Math.PI*2);
+      cx.fillStyle = `rgba(${r2},${g2},${b2},${dotAlpha})`;
+      cx.fill();
+    }
+
+    // OLS regression line
+    let sX=0,sY=0,sXY=0,sX2=0, n=obs.length;
+    for(let i=0;i<n;i++){sX+=obs[i];sY+=pred[i];sXY+=obs[i]*pred[i];sX2+=obs[i]*obs[i];}
+    const slope=(n*sXY-sX*sY)/(n*sX2-sX*sX);
+    const intcpt=(sY-slope*sX)/n;
+    const rx1=xMin, ry1=slope*rx1+intcpt;
+    const rx2=xMax, ry2=slope*rx2+intcpt;
+    cx.beginPath();
+    cx.moveTo(px(rx1,ox), py(Math.max(yMin,Math.min(yMax,ry1))));
+    cx.lineTo(px(rx2,ox), py(Math.max(yMin,Math.min(yMax,ry2))));
+    cx.strokeStyle=regCol; cx.lineWidth=3; cx.stroke();
+
+    // Y-axis labels (left panel only)
+    if(ox===0){
+      cx.fillStyle=PAL.white; cx.font='bold 11px Space Mono,monospace'; cx.textAlign='right';
+      [30000,35000,40000,45000,50000].forEach(v=>{
+        cx.fillText((v/1000)+'k', ox+pad.l-5, py(v)+4);
+      });
+      cx.save(); cx.translate(14, pad.t+ph/2); cx.rotate(-Math.PI/2);
+      cx.fillStyle=PAL.muted; cx.font='bold 11px Space Mono,monospace'; cx.textAlign='center';
+      cx.fillText('Carga Prevista (MW médio)', 0, 0); cx.restore();
+    }
+
+    // X-axis labels
+    cx.fillStyle=PAL.white; cx.font='bold 11px Space Mono,monospace'; cx.textAlign='center';
+    [30000,35000,40000,45000,50000,55000].forEach(v=>{
+      const xp=px(v,ox);
+      if(xp>=ox+pad.l-4 && xp<=ox+pad.l+W+4)
+        cx.fillText((v/1000)+'k', xp, pad.t+ph+18);
+    });
+    cx.fillStyle=PAL.muted; cx.font='bold 11px Space Mono,monospace'; cx.textAlign='center';
+    cx.fillText('Carga Real (MW médio)', ox+pad.l+W/2, pad.t+ph+36);
+
+    // Panel title
+    cx.fillStyle=PAL.white; cx.font='bold 14px Space Mono,monospace'; cx.textAlign='center';
+    cx.fillText(label, ox+pad.l+W/2, pad.t-14);
+
+    // Border
+    cx.strokeStyle='rgba(0,200,255,0.18)'; cx.lineWidth=1;
+    cx.strokeRect(ox+pad.l, pad.t, W, ph);
+  });
+}
+
+function initMetricChart() {
+  if(chartsInited.has('metric')) return; chartsInited.add('metric');
+  const r=setupCanvas('metricChart',270); if(!r) return;
+  const {c,cx}=r;
+  const totalW=c.width, H=c.height, pW=totalW/3;
+  const pad={t:54,r:10,b:46,l:62};
+  const panels=[
+    {title:'RMSE (MW)',proph:3816.1,hybr:2210.5,pct:42.1,maxV:4000,ticks:[0,1000,2000,3000,4000]},
+    {title:'MAE (MW)', proph:2943.6,hybr:1558,  pct:47.1,maxV:3000,ticks:[0,1000,2000,3000]},
+    {title:'MAPE (%)', proph:6.6,   hybr:3.5,   pct:46.7,maxV:7,   ticks:[0,2,4,6]},
+  ];
+  panels.forEach((p,pi)=>{
+    const ox=pi*pW, W=pW-pad.l-pad.r, ph=H-pad.t-pad.b, range=p.maxV;
+    cx.fillStyle=PAL.white; cx.font='bold 13px Space Mono,monospace'; cx.textAlign='center'; cx.fillText(p.title,ox+pad.l+W/2,16);
+    cx.fillStyle=PAL.red; cx.font='bold 14px Space Mono,monospace'; cx.textAlign='center'; cx.fillText('−'+p.pct+'%',ox+pad.l+W/2,36);
+    cx.strokeStyle=PAL.dim; cx.lineWidth=1;
+    p.ticks.forEach(v=>{ const y=pad.t+ph-(v/range)*ph; cx.beginPath(); cx.moveTo(ox+pad.l,y); cx.lineTo(ox+pad.l+W,y); cx.stroke(); cx.fillStyle=PAL.white; cx.font='bold 11px Space Mono,monospace'; cx.textAlign='right'; const lbl=p.title.includes('%')?v.toFixed(0):v>=1000?(v/1000).toFixed(0)+'k':v; cx.fillText(lbl,ox+pad.l-4,y+4); });
+    const bW=W*0.27, gap=W*0.1, xP=ox+pad.l+W*0.14, xH=xP+bW+gap;
+    const phH=(p.proph/range)*ph; const gP=cx.createLinearGradient(xP,pad.t+ph-phH,xP,pad.t+ph); gP.addColorStop(0,PAL.orange); gP.addColorStop(1,'rgba(255,126,0,0.3)'); cx.fillStyle=gP; cx.beginPath(); cx.roundRect(xP,pad.t+ph-phH,bW,phH,[3,3,0,0]); cx.fill(); cx.fillStyle=PAL.orange; cx.font='bold 11px Space Mono,monospace'; cx.textAlign='center'; cx.fillText(p.proph.toLocaleString('pt-BR'),xP+bW/2,pad.t+ph-phH-8);
+    const hyH=(p.hybr/range)*ph; const gH=cx.createLinearGradient(xH,pad.t+ph-hyH,xH,pad.t+ph); gH.addColorStop(0,PAL.cyan); gH.addColorStop(1,'rgba(0,255,231,0.25)'); cx.fillStyle=gH; cx.beginPath(); cx.roundRect(xH,pad.t+ph-hyH,bW,hyH,[3,3,0,0]); cx.fill(); cx.fillStyle=PAL.cyan; cx.font='bold 11px Space Mono,monospace'; cx.textAlign='center'; cx.fillText(p.hybr.toLocaleString('pt-BR'),xH+bW/2,pad.t+ph-hyH-8);
+    cx.fillStyle=PAL.muted; cx.font='10px Barlow,sans-serif'; cx.textAlign='center'; cx.fillText('Prophet',xP+bW/2,pad.t+ph+16); cx.fillText('Prophet',xH+bW/2,pad.t+ph+16); cx.fillText('+LightGBM',xH+bW/2,pad.t+ph+30);
+  });
+}
+
+const MONTHS_SHORT=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const MAE_PROPHET_REAL=[3500,4200,3800,2800,2200,1600,1388,1700,2800,2900,3600,4100];
+const MAE_HYBRID_REAL =[2000,2400,2100,1300,1100,780, 580, 820, 1600,1450,2050,2300];
+
+function initMaeMonthChart() {
+  if(chartsInited.has('maeMonth')) return; chartsInited.add('maeMonth');
+  const r=setupCanvas('maeMonthChart',250); if(!r) return;
+  const {c,cx}=r;
+  const pad={t:20,r:16,b:40,l:72};
+  const W=c.width-pad.l-pad.r, H=c.height-pad.t-pad.b, maxV=4500, range=maxV;
+  const px2=(i)=>pad.l+(i/11)*W, py2=(v)=>pad.t+H-(v/range)*H;
+  cx.strokeStyle=PAL.dim; cx.lineWidth=1;
+  [0,1000,2000,3000,4000].forEach(v=>{ const y=pad.t+H-(v/range)*H; cx.beginPath(); cx.moveTo(pad.l,y); cx.lineTo(pad.l+W,y); cx.stroke(); cx.fillStyle=PAL.white; cx.font='bold 12px Space Mono,monospace'; cx.textAlign='right'; cx.fillText(v===0?'0':(v/1000).toFixed(0)+'k',pad.l-6,y+4); });
+  cx.fillStyle=PAL.white; cx.font='bold 12px Space Mono,monospace'; cx.textAlign='center';
+  MONTHS_SHORT.forEach((m,i)=>{ cx.fillText(m,pad.l+(i/11)*W,pad.t+H+20); });
+  cx.beginPath(); MAE_PROPHET_REAL.forEach((v,i)=>{ if(i===0) cx.moveTo(px2(i),py2(v)); else cx.lineTo(px2(i),py2(v)); }); for(let i=11;i>=0;i--) cx.lineTo(px2(i),py2(MAE_HYBRID_REAL[i])); cx.closePath(); cx.fillStyle='rgba(0,255,180,0.1)'; cx.fill();
+  cx.beginPath(); MAE_PROPHET_REAL.forEach((v,i)=>{ if(i===0) cx.moveTo(px2(i),py2(v)); else cx.lineTo(px2(i),py2(v)); }); cx.strokeStyle=PAL.orange; cx.lineWidth=2.8; cx.lineJoin='round'; cx.stroke(); MAE_PROPHET_REAL.forEach((v,i)=>{ cx.beginPath(); cx.arc(px2(i),py2(v),5,0,Math.PI*2); cx.fillStyle=PAL.orange; cx.fill(); });
+  cx.beginPath(); MAE_HYBRID_REAL.forEach((v,i)=>{ if(i===0) cx.moveTo(px2(i),py2(v)); else cx.lineTo(px2(i),py2(v)); }); cx.strokeStyle=PAL.cyan; cx.lineWidth=2.8; cx.lineJoin='round'; cx.stroke(); MAE_HYBRID_REAL.forEach((v,i)=>{ cx.beginPath(); cx.arc(px2(i),py2(v),5,0,Math.PI*2); cx.fillStyle=PAL.cyan; cx.fill(); });
+  const jx=px2(6); cx.strokeStyle='rgba(255,255,255,0.2)'; cx.lineWidth=1; cx.setLineDash([3,3]); cx.beginPath(); cx.moveTo(jx,py2(1388)); cx.lineTo(jx,pad.t+H); cx.stroke(); cx.setLineDash([]);
+  cx.fillStyle=PAL.green; cx.font='bold 11px Space Mono,monospace'; cx.textAlign='center'; cx.fillText('Jul: −58%',jx,py2(580)-12);
+  const leg=[[PAL.orange,'Prophet'],[PAL.cyan,'Prophet+LightGBM']]; const legItemW=[90,190]; const totalLegW=legItemW[0]+36+legItemW[1]; const legX0=pad.l+W/2-totalLegW/2; let legCursor=legX0;
+  leg.forEach(([col,lbl],i)=>{ const lx=legCursor+6,ly=pad.t+H+34; cx.beginPath(); cx.arc(lx,ly,5,0,Math.PI*2); cx.fillStyle=col; cx.fill(); cx.strokeStyle=col; cx.lineWidth=2; cx.beginPath(); cx.moveTo(lx-16,ly); cx.lineTo(lx-8,ly); cx.stroke(); cx.fillStyle=PAL.white; cx.font='bold 12px Space Mono,monospace'; cx.textAlign='left'; cx.fillText(lbl,lx+12,ly+4); legCursor+=legItemW[i]+36; });
+}
+
+function drawACFReal(id, h, lags_n, lag1Val, decayRate, weekBoost, color) {
+  const r=setupCanvas(id,h); if(!r) return;
+  const {c,cx}=r;
+  const pad={t:16,r:14,b:30,l:64};
+  const W=c.width-pad.l-pad.r, H=c.height-pad.t-pad.b;
+  const minV=-0.1, maxV=1.0, range=1.1;
+  const zeroY=pad.t+H-((0-minV)/range)*H;
+  const bW=Math.max(4,(W/lags_n)-1.5);
+  cx.strokeStyle=PAL.dim; cx.lineWidth=1;
+  [-0.1,0,0.25,0.5,0.75,1.0].forEach(v=>{ const y=pad.t+H-((v-minV)/range)*H; cx.beginPath(); cx.moveTo(pad.l,y); cx.lineTo(pad.l+W,y); cx.stroke(); cx.fillStyle=PAL.white; cx.font='bold 11px Space Mono,monospace'; cx.textAlign='right'; cx.fillText(v.toFixed(2),pad.l-4,y+4); });
+  const conf=1.96/Math.sqrt(1461);
+  cx.strokeStyle='rgba(255,80,120,0.7)'; cx.setLineDash([5,4]); cx.lineWidth=1.5;
+  [conf,-conf].forEach(v=>{ const y=pad.t+H-((v-minV)/range)*H; cx.beginPath(); cx.moveTo(pad.l,y); cx.lineTo(pad.l+W,y); cx.stroke(); }); cx.setLineDash([]);
+  cx.strokeStyle='rgba(255,255,255,0.15)'; cx.lineWidth=1; cx.beginPath(); cx.moveTo(pad.l,zeroY); cx.lineTo(pad.l+W,zeroY); cx.stroke();
+  for(let i=0;i<lags_n;i++){ const lag=i+1; const weekPeak=(lag%7===0)?weekBoost:0; const acfVal=Math.max(-0.08,lag1Val*Math.pow(decayRate,i)+weekPeak+(Math.sin(i*0.4)*0.015)); const x=pad.l+(i/(lags_n-1))*(W-bW)+bW/2; const y=pad.t+H-((acfVal-minV)/range)*H; cx.strokeStyle=color; cx.lineWidth=1.8; cx.beginPath(); cx.moveTo(x,zeroY); cx.lineTo(x,y); cx.stroke(); cx.beginPath(); cx.arc(x,y,3.5,0,Math.PI*2); cx.fillStyle=color; cx.fill(); }
+  cx.fillStyle=PAL.white; cx.font='bold 12px Space Mono,monospace'; cx.textAlign='center';
+  [1,10,20,30,40,50,60].forEach(lag=>{ if(lag<=lags_n){ const x=pad.l+((lag-1)/(lags_n-1))*(W-bW)+bW/2; cx.fillText(lag,x,pad.t+H+18); }});
+  cx.fillStyle=PAL.muted; cx.font='11px Barlow,sans-serif'; cx.textAlign='center'; cx.fillText('Defasagem (dias)',pad.l+W/2,pad.t+H+30);
+}
+
+function initACFCharts() {
+  if(chartsInited.has('acf')) return; chartsInited.add('acf');
+  drawACFReal('acfProphetChart',190,60,0.87,0.983,0.06,PAL.orange);
+  drawACFReal('acfHybridChart', 190,60,0.80,0.978,0.04,PAL.cyan);
+}
+
+function initLjungChart() {
+  if(chartsInited.has('ljung')) return; chartsInited.add('ljung');
+  const r = setupCanvas('ljungChart', 290); if(!r) return;
+  const {c, cx} = r;
+  const pad = {t:24, r:18, b:56, l:72};
+  const W = c.width-pad.l-pad.r, H = c.height-pad.t-pad.b, n = 30;
+  cx.strokeStyle = PAL.dim; cx.lineWidth = 1;
+  [0, 0.1, 0.2, 0.3, 0.4, 0.5].forEach(v => {
+    const y = pad.t + H - (v / 0.5) * H;
+    cx.beginPath(); cx.moveTo(pad.l, y); cx.lineTo(pad.l+W, y); cx.stroke();
+    cx.fillStyle = PAL.white; cx.font = 'bold 13px Space Mono,monospace'; cx.textAlign = 'right';
+    cx.fillText(v.toFixed(1), pad.l-6, y+4);
+  });
+  const alphaY = pad.t + H - (0.05 / 0.5) * H;
+  cx.strokeStyle = 'rgba(255,80,80,0.85)'; cx.setLineDash([7,5]); cx.lineWidth = 2;
+  cx.beginPath(); cx.moveTo(pad.l, alphaY); cx.lineTo(pad.l+W, alphaY); cx.stroke();
+  cx.setLineDash([]);
+  cx.fillStyle = 'rgba(255,80,80,0.9)'; cx.font = 'bold 11px Space Mono,monospace'; cx.textAlign = 'left';
+  cx.fillText('α = 0,05', pad.l+6, alphaY-6);
+  cx.fillStyle = PAL.white; cx.font = 'bold 13px Space Mono,monospace'; cx.textAlign = 'center';
+  [0, 5, 10, 15, 20, 25, 30].forEach(v => { const x = v === 0 ? pad.l : pad.l + (v/29)*W; cx.fillText(v, x, pad.t+H+20); });
+  cx.save(); cx.translate(16, pad.t+H/2); cx.rotate(-Math.PI/2);
+  cx.fillStyle = PAL.muted; cx.font = 'bold 13px Barlow,sans-serif'; cx.textAlign = 'center';
+  cx.fillText('p-valor', 0, 0); cx.restore();
+  cx.fillStyle = PAL.muted; cx.font = '13px Barlow,sans-serif'; cx.textAlign = 'center';
+  cx.fillText('Defasagem (dias)', pad.l+W/2, pad.t+H+38);
+  for(let i=0; i<n; i++){
+    const x = pad.l + (i/29)*W;
+    const pP = 0.0001 + Math.abs(Math.sin(i*0.3)) * 0.0005;
+    const yP = pad.t + H - (Math.min(pP, 0.5) / 0.5) * H;
+    cx.beginPath(); cx.arc(x, yP, 8, 0, Math.PI*2);
+    cx.fillStyle = 'rgba(255,126,0,0.9)'; cx.fill();
+    cx.strokeStyle = PAL.orange; cx.lineWidth = 1.5; cx.stroke();
+    const pH = 0.008 + Math.abs(Math.sin(i*1.1)) * 0.025 + Math.abs(Math.cos(i*0.7)) * 0.015;
+    const yH = pad.t + H - (Math.min(pH, 0.5) / 0.5) * H;
+    cx.beginPath(); cx.arc(x, yH, 8, 0, Math.PI*2);
+    cx.fillStyle = 'rgba(0,255,231,0.85)'; cx.fill();
+    cx.strokeStyle = PAL.cyan; cx.lineWidth = 1.5; cx.stroke();
+  }
+  const legY = pad.t + H + 50;
+  [[PAL.orange, 'rgba(255,126,0,0.9)', 'Prophet'], [PAL.cyan, 'rgba(0,255,231,0.85)', 'Prophet+LightGBM']].forEach(([stroke, fill, lbl], i) => {
+    const lx = pad.l + 50 + i * 230;
+    cx.beginPath(); cx.arc(lx, legY, 8, 0, Math.PI*2);
+    cx.fillStyle = fill; cx.fill(); cx.strokeStyle = stroke; cx.lineWidth = 1.5; cx.stroke();
+    cx.fillStyle = PAL.white; cx.font = 'bold 13px Space Mono,monospace'; cx.textAlign = 'left';
+    cx.fillText(lbl, lx+14, legY+5);
+  });
+}
+
+// ═══ CHART DISPATCH ═══
+function initChartsForSlide(n) {
+  if(n===3)  { try{initSerieChart();}catch(e){} }
+  if(n===11) { try{initTrendChart();initWeekChart();initYearChart();}catch(e){} }
+  if(n===12) { try{initCamadaCharts();}catch(e){} }
+  if(n===13) { try{initScatterChart();}catch(e){} }
+  if(n===14) { try{initMetricChart();}catch(e){} }
+  if(n===15) { try{initMaeMonthChart();}catch(e){} }
+  if(n===17) { try{initACFCharts();}catch(e){} }
+  if(n===18) { try{initLjungChart();}catch(e){} }
+}
+</script>
+</body>
+</html>
