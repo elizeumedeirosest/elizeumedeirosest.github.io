@@ -1,0 +1,1321 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>Elizeu Medeiros — Estatístico & Cientista de Dados</title>
+
+    <!-- SEO -->
+    <meta
+      name="description"
+      content="Elizeu Medeiros — Estatístico e Cientista de Dados na UEPB. Portfólio com projetos de machine learning, séries temporais, análise espacial e modelagem preditiva."
+    />
+    <link rel="canonical" href="https://elizeumedeirosest.github.io/" />
+
+    <!-- Open Graph (WhatsApp, LinkedIn, Facebook) -->
+    <meta property="og:type" content="profile" />
+    <meta property="og:url" content="https://elizeumedeirosest.github.io/" />
+    <meta
+      property="og:title"
+      content="Elizeu Medeiros — Estatístico & Cientista de Dados"
+    />
+    <meta
+      property="og:description"
+      content="Portfólio com projetos de machine learning, séries temporais, análise espacial e modelagem preditiva."
+    />
+    <meta
+      property="og:image"
+      content="https://elizeumedeirosest.github.io/imagem/foto_perfil/foto_perfil.jpeg"
+    />
+    <meta property="og:image:width" content="595" />
+    <meta property="og:image:height" content="811" />
+    <meta property="og:locale" content="pt_BR" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Elizeu Medeiros — Estatístico & Cientista de Dados"
+    />
+    <meta
+      name="twitter:description"
+      content="Portfólio com projetos de machine learning, séries temporais, análise espacial e modelagem preditiva."
+    />
+    <meta
+      name="twitter:image"
+      content="https://elizeumedeirosest.github.io/imagem/foto_perfil/foto_perfil.jpeg"
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,500;0,700;1,300;1,500;1,700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css" />
+  </head> 
+  <body>
+    <!-- ── PROGRESS BAR ── -->
+    <div id="prog"></div>
+
+    <!-- ══════════════════════════════════════
+     MODAL — Projetos e Certificados
+══════════════════════════════════════ -->
+    <div
+      class="modal-overlay"
+      id="fileModal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Visualizador de arquivo"
+    >
+      <div class="modal-box">
+        <!-- Cabeçalho estilo browser premium -->
+        <div class="modal-header">
+          <div class="modal-dots">
+            <span class="modal-dot modal-dot-r"></span>
+            <span class="modal-dot modal-dot-y"></span>
+            <span class="modal-dot modal-dot-g"></span>
+          </div>
+          <div class="modal-urlbar">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <span class="modal-title" id="modalTitle">Carregando…</span>
+          </div>
+          <button class="modal-close" id="modalClose" aria-label="Fechar modal">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Corpo -->
+        <div class="modal-body">
+          <!-- Spinner -->
+          <div class="modal-loading" id="modalLoading">
+            <div class="modal-spinner"></div>
+            <span class="modal-loading-label">Carregando arquivo…</span>
+          </div>
+          <!-- Mensagem de erro -->
+          <div class="modal-error" id="modalError">
+            <div class="modal-error-icon">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="12" x2="12" y2="16" />
+                <circle cx="12" cy="19" r=".5" fill="currentColor" />
+              </svg>
+            </div>
+            <h4>Arquivo não encontrado</h4>
+            <p>Coloque o arquivo na pasta correta e tente novamente.</p>
+            <code id="modalErrorPath"></code>
+          </div>
+          <!-- iframe principal -->
+          <iframe
+            id="modalIframe"
+            title="Visualizador de arquivo"
+            allowfullscreen
+          ></iframe>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+     NAV
+══════════════════════════════════════ -->
+    <nav id="nav">
+      <div class="nav-controls" id="navControls">
+        <!-- Premium Dark Mode Toggle -->
+        <button
+          class="dm-toggle"
+          id="dmToggle"
+          aria-label="Toggle Theme"
+          title="Alternar tema"
+        >
+          <!-- Sun icon (light mode) -->
+          <svg
+            class="icon-sun"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+          <!-- Moon icon (dark mode) -->
+          <svg
+            class="icon-moon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+        </button>
+
+        <!-- Menu toggle (hambúrguer ⇄ X) -->
+        <button
+          class="menu-toggle"
+          id="menuToggle"
+          aria-label="Abrir menu"
+          aria-expanded="false"
+          aria-controls="navOverlay"
+        >
+          <span class="menu-toggle-bars">
+            <span></span><span></span><span></span>
+          </span>
+          <span class="menu-toggle-x">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </span>
+        </button>
+      </div>
+
+      <!-- Overlay full-screen -->
+      <div class="nav-overlay" id="navOverlay">
+        <div class="nav-overlay-bg"></div>
+        <div class="nav-overlay-inner">
+          <ul class="nav-links" id="navLinks">
+            <li><a href="#hero">Home</a></li>
+            <li><a href="#sobre">Sobre</a></li>
+            <li><a href="#skills">Skills</a></li>
+            <li><a href="#projetos">Projetos</a></li>
+            <li><a href="#pub">Certificados</a></li>
+            <li><a href="#contato">Contato</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+
+    <!-- ══════════════════════════════════════
+     HERO
+══════════════════════════════════════ -->
+    <section id="hero">
+      <div class="hero-centered-content">
+        <h1 class="hero-name" id="hero-title">
+          <span class="visually-hidden">Elizeu Medeiros</span>
+          <span aria-hidden="true" style="display:flex;flex-direction:column;line-height:0.9;">
+            <span class="decoder-text" data-text="ELIZEU"></span>
+            <span class="decoder-text decoder-blue" data-text="MEDEIROS"></span>
+          </span>
+        </h1>
+
+        <h2 class="hero-title-block">
+          <span class="visually-hidden">Estatístico · Cientista de Dados</span>
+          <span aria-hidden="true">
+            <span class="hero-subtitle-word">Estatístico</span>
+            <span class="hero-subtitle-sep"> e </span>
+            <span class="hero-subtitle-word hero-subtitle-underline" style="--delay:600ms">Cientista de Dados</span>
+          </span>
+        </h2>
+
+        <div class="hero-socials" id="heroSocials">
+          <a href="https://wa.me/5583998444502?text=Ol%C3%A1%20Elizeu%2C%20tenho%20um%20projeto%20para%20voc%C3%AA!" target="_blank" rel="noopener" class="hero-soc" title="WhatsApp">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+          </a>
+          <a href="https://instagram.com/elizeumedeiros01" target="_blank" rel="noopener" class="hero-soc" title="Instagram">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+          </a>
+          <a href="https://www.linkedin.com/in/elizeu-medeiros-3a86b73b0" target="_blank" rel="noopener" class="hero-soc" title="LinkedIn">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+          </a>
+          <a href="https://github.com/elizeumedeirosest" target="_blank" rel="noopener" class="hero-soc" title="GitHub">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          </a>
+          <a href="https://lattes.cnpq.br/6534730479666967" target="_blank" rel="noopener" class="hero-soc" title="Lattes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M8 9h3m0 0h4m-4 0v6M8 15h3"/></svg>
+          </a>
+          <a href="mailto:elizeumedeirosest@gmail.com" class="hero-soc" title="Email">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22,6 12,13 2,6"/></svg>
+          </a>
+        </div>
+      </div>
+
+
+    </section>
+
+    <!-- ══════════════════════════════════════
+     STATS
+══════════════════════════════════════ -->
+    <div class="stats-band">
+      <div class="stats-inner">
+        <div class="sbox" style="padding: 1.5rem 2rem">
+          <span class="sbox-n">+20</span
+          ><span class="sbox-l">Trabalhos Acadêmicos</span>
+        </div>
+        <div class="sbox" style="padding: 1.5rem 2rem">
+          <span class="sbox-n">+4</span
+          ><span class="sbox-l">Congressos &amp; Eventos</span>
+        </div>
+        <div class="sbox" style="padding: 1.5rem 2rem">
+          <span class="sbox-n">+1</span
+          ><span class="sbox-l">Artigo Publicado</span>
+        </div>
+        <div class="sbox" style="padding: 1.5rem 2rem">
+          <span class="sbox-n">+5</span
+          ><span class="sbox-l">Cursos com Certificado</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════
+     SOBRE
+══════════════════════════════════════ -->
+    <section id="sobre" class="sec">
+      <div class="sec-inner sobre-grid">
+        <div class="sobre-photo">
+          <div class="photo-frame">
+            <div class="corner-tl"></div>
+            <div class="photo-inner">
+              <img src="imagem/foto_perfil/foto_perfil.jpeg" alt="Elizeu Medeiros" loading="lazy" decoding="async" width="595" height="811" />
+            </div>
+          </div>
+        </div>
+        <div class="sobre-content">
+          <div class="ey">
+            <span class="ey-n">01 — TRAJETÓRIA</span>
+            <div class="ey-r"></div>
+          </div>
+          <h2 class="sec-h">Um pouco <em>sobre mim</em></h2>
+          <p class="sobre-body" style="text-align: justify; margin-bottom: 1.5rem;">
+            Olá! Me chamo Elizeu Medeiros, sou Graduando em <strong>Estatística e Ciência de Dados</strong> pela
+            Universidade Estadual da Paraíba (UEPB) e bolsista em Programas de Iniciação Científica (PIBIC/CNPq) e Projetos de Extensão (PROEX/UEPB), com
+            experiência em probabilidade, inferência estatística, modelagem
+            preditiva, análise espacial e delineamento de experimentos
+            aplicados a problemas reais.
+          </p>
+          <p class="sobre-body" style="text-align: justify">
+Como destaque recente, desenvolvi um projeto voltado à previsão da demanda elétrica do Sistema Interligado Nacional (SIN), utilizando modelos de <strong>machine learning</strong> para previsão de séries temporais. O trabalho foi apresentado no Congresso Brasileiro Interdisciplinar em Ciência e Tecnologia (COBICET 2025). Atualmente, desenvolvo pesquisa na área de séries temporais com distribuições SAR, sob orientação do Prof. Dr. Pedro Monteiro de Almeida Junior.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
+     TRAJETÓRIA ACADÊMICA
+══════════════════════════════════════ -->
+    <section id="trajetoria" class="sec">
+      <div class="sec-inner">
+        <div class="ey">
+          <span class="ey-n">01.1 — TRAJETÓRIA ACADÊMICA</span>
+          <div class="ey-r"></div>
+        </div>
+        <h2 class="sec-h">Minha jornada <em>acadêmica</em></h2>
+        <div class="timeline-alternated">
+          <!-- Timeline line que será preenchida no scroll -->
+          <div class="timeline-progress-container">
+            <div class="timeline-progress-line"></div>
+          </div>
+
+          <!-- Item 1 - Direita -->
+          <div class="t-alt-item t-alt-right">
+            <div class="t-alt-content">              <div class="t-alt-year">2023.1</div>
+              <div class="t-alt-title">Início da Graduação</div>
+              <div class="t-alt-desc">
+                Bacharelado em Estatística e Ciência de Dados
+              </div>
+              <div class="t-alt-inst">
+                Universidade Estadual da Paraíba - UEPB<br />Campina Grande - PB
+              </div>
+            </div>
+            <div class="t-alt-dot"></div>
+          </div>
+
+          <!-- Item 2 - Esquerda -->
+          <div class="t-alt-item t-alt-left">
+            <div class="t-alt-dot"></div>
+            <div class="t-alt-content">              <div class="t-alt-year">2023.1</div>
+              <div class="t-alt-title">Dia do Estatístico</div>
+              <div class="t-alt-desc">
+                Encontro - Dia do Estatístico
+              </div>
+              <div class="t-alt-inst">
+                Universidade Estadual da Paraíba - UEPB<br />Campina Grande - PB
+              </div>
+            </div>
+          </div>
+
+          <!-- Item 3 - Direita -->
+          <div class="t-alt-item t-alt-right">
+            <div class="t-alt-content">              <div class="t-alt-year">2023.2</div>
+              <div class="t-alt-title">Primeiro PIBIC</div>
+              <div class="t-alt-desc">
+                Otimização do Observatório Tecnológico da UEPB
+              </div>
+              <div class="t-alt-inst">
+                Orientador(a): Profa. Ana Maria da Paixão Duarte
+              </div>
+            </div>
+            <div class="t-alt-dot"></div>
+          </div>
+
+          <!-- Item 4 - Esquerda -->
+          <div class="t-alt-item t-alt-left">
+            <div class="t-alt-dot"></div>
+            <div class="t-alt-content">              <div class="t-alt-year">2023.2</div>
+              <div class="t-alt-title">IV Encontro Paraibano de Estatística</div>
+              <div class="t-alt-desc">
+                Participação no IV EPBEST
+              </div>
+              <div class="t-alt-inst">
+                Universidade Estadual da Paraíba - UEPB<br />Campina Grande - PB
+              </div>
+            </div>
+          </div>
+
+          <!-- Item 5 - Direita -->
+          <div class="t-alt-item t-alt-right">
+            <div class="t-alt-content">              <div class="t-alt-year">2024.1</div>
+              <div class="t-alt-title">Projeto de Extensão</div>
+              <div class="t-alt-desc">
+                Inspeção e Avaliação do Custo Médio da Água Mineral em Campina Grande
+              </div>
+              <div class="t-alt-inst">
+                Coordenação: Profa. Ana Patrícia Bastos Peixoto
+              </div>
+            </div>
+            <div class="t-alt-dot"></div>
+          </div>
+
+          <!-- Item 6 - Esquerda -->
+          <div class="t-alt-item t-alt-left">
+            <div class="t-alt-dot"></div>
+            <div class="t-alt-content">              <div class="t-alt-year">2025.2</div>
+              <div class="t-alt-title">Segundo PIBIC</div>
+              <div class="t-alt-desc">
+                Processos G0-ARMA e KB-ARMA aplicados ao Índice RVI
+              </div>
+              <div class="t-alt-inst">
+                Orientador: Prof. Dr. Pedro Monteiro de Almeida Junior
+              </div>
+            </div>
+          </div>
+
+          <!-- Item 7 - Direita -->
+          <div class="t-alt-item t-alt-right">
+            <div class="t-alt-content">              <div class="t-alt-year">2026.1</div>
+              <div class="t-alt-title">Dia do Estatístico</div>
+              <div class="t-alt-desc">
+                Encontro - Dia do Estatístico
+              </div>
+              <div class="t-alt-inst">
+                Universidade Estadual da Paraíba - UEPB<br />Campina Grande - PB
+              </div>
+            </div>
+            <div class="t-alt-dot"></div>
+          </div>
+
+          <!-- Item 8 - Esquerda -->
+          <div class="t-alt-item t-alt-left">
+            <div class="t-alt-dot"></div>
+            <div class="t-alt-content">              <div class="t-alt-year">2026.1</div>
+              <div class="t-alt-title">Tuberculose em Foco</div>
+              <div class="t-alt-desc">
+                Encontro -Tuberculose em Foco: Evidências, Desafios e Inovações na Saúde Pública
+              </div>
+              <div class="t-alt-inst">
+                Universidade Estadual da Paraíba - UEPB<br />Campina Grande - PB
+              </div>
+            </div>
+          </div>
+
+          <!-- Item 9 - Direita -->
+          <div class="t-alt-item t-alt-right">
+            <div class="t-alt-content">              <div class="t-alt-year">2023 — 2026</div>
+              <div class="t-alt-title">Certificações em Softwares</div>
+              <div class="t-alt-desc">
+                Cursos nos softwares R e Python realizados ao longo do período acadêmico, incluindo programação avançada, visualização de dados e análise estatística.
+              </div>
+              <div class="t-alt-inst">
+                Formação continuada em ferramentas de ciência de dados
+              </div>
+            </div>
+            <div class="t-alt-dot"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
+     SKILLS
+══════════════════════════════════════ -->
+    <section id="skills" class="sec">
+      <div class="sec-inner">
+        <div class="ey">
+          <span class="ey-n">02.1 — HABILIDADES</span>
+          <div class="ey-r"></div>
+        </div>
+        <h2 class="sec-h">Stack <em>técnico</em></h2>
+        <div class="sk2-grid">
+
+          <!-- Linguagens -->
+          <div class="sk2-card">
+            <div class="sk2-header">
+              <div class="sk2-hd-left">
+                <div class="sk2-cat-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 6 3 12 8 18"/><polyline points="16 6 21 12 16 18"/></svg>
+                </div>
+                <span class="sk2-title">Linguagens</span>
+              </div>
+              <div class="sk2-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></div>
+            </div>
+            <div class="sk2-body"><div>
+              <div class="sk2-icons-grid">
+                <div class="sk2-tech" data-name="R — Avançado"><div class="sk2-tech-icon"><i class="devicon-r-plain colored"></i></div></div>
+                <div class="sk2-tech" data-name="Python — Intermediário"><div class="sk2-tech-icon"><i class="devicon-python-plain colored"></i></div></div>
+                <div class="sk2-tech" data-name="SQL — Intermediário"><div class="sk2-tech-icon"><i class="devicon-azuresqldatabase-plain colored"></i></div></div>
+                <div class="sk2-tech" data-name="Julia — Básico"><div class="sk2-tech-icon"><img src="svg/julia.svg" alt="Julia" style="width:26px;height:26px;object-fit:contain;"/></div></div>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- Web -->
+          <div class="sk2-card">
+            <div class="sk2-header">
+              <div class="sk2-hd-left">
+                <div class="sk2-cat-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18"/><path d="M12 3a15 15 0 0 0 0 18"/></svg>
+                </div>
+                <span class="sk2-title">Desenvolvimento Web</span>
+              </div>
+              <div class="sk2-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></div>
+            </div>
+            <div class="sk2-body"><div>
+              <div class="sk2-icons-grid">
+                <div class="sk2-tech" data-name="HTML — Básico"><div class="sk2-tech-icon"><i class="devicon-html5-plain colored"></i></div></div>
+                <div class="sk2-tech" data-name="CSS — Básico"><div class="sk2-tech-icon"><i class="devicon-css3-plain colored"></i></div></div>
+                <div class="sk2-tech" data-name="JavaScript — Básico"><div class="sk2-tech-icon"><i class="devicon-javascript-plain colored"></i></div></div>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- Ambiente -->
+          <div class="sk2-card">
+            <div class="sk2-header">
+              <div class="sk2-hd-left">
+                <div class="sk2-cat-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><polyline points="7 9 10 12 7 15"/><line x1="13" y1="15" x2="17" y2="15"/></svg>
+                </div>
+                <span class="sk2-title">Ambiente Dev</span>
+              </div>
+              <div class="sk2-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></div>
+            </div>
+            <div class="sk2-body"><div>
+              <div class="sk2-icons-grid">
+                <div class="sk2-tech" data-name="RStudio"><div class="sk2-tech-icon"><i class="devicon-rstudio-plain colored"></i></div></div>
+                <div class="sk2-tech" data-name="VS Code"><div class="sk2-tech-icon"><i class="devicon-vscode-plain colored"></i></div></div>
+                <div class="sk2-tech" data-name="Positron"><div class="sk2-tech-icon"><img src="svg/positron.svg" alt="Positron" style="width:26px;height:26px;object-fit:contain;"/></div></div>
+                <div class="sk2-tech" data-name="Google Colab"><div class="sk2-tech-icon"><i class="devicon-googlecolab-plain colored"></i></div></div>
+                <div class="sk2-tech" data-name="Jupyter"><div class="sk2-tech-icon"><img src="svg/jupyter.svg" alt="Jupyter" style="width:26px;height:26px;object-fit:contain;"/></div></div>
+                <div class="sk2-tech"><div class="sk2-tech-icon"><i class="devicon-git-plain colored"></i></div></div>
+                <div class="sk2-tech" data-name="GitHub"><div class="sk2-tech-icon"><i class="devicon-github-original colored"></i></div></div>
+                <div class="sk2-tech"><div class="sk2-tech-icon"><img src="https://www.cursor.com/favicon.ico" alt="Cursor" style="width:24px;height:24px;object-fit:contain;" onerror="this.style.display='none';this.parentElement.innerHTML='<svg viewBox=\'0 0 32 32\' width=\'24\' height=\'24\'><rect width=\'32\' height=\'32\' rx=\'7\' fill=\'#000\'/><text x=\'16\' y=\'22\' text-anchor=\'middle\' font-family=\'monospace\' font-size=\'11\' font-weight=\'900\' fill=\'#fff\'>↗</text></svg>'"/></div></div>
+                <div class="sk2-tech"><div class="sk2-tech-icon"><img src="svg/antigravity.svg" alt="AntiGravity" style="width:26px;height:26px;object-fit:contain;"/></div></div>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- Relatórios -->
+          <div class="sk2-card">
+            <div class="sk2-header">
+              <div class="sk2-hd-left">
+                <div class="sk2-cat-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
+                <span class="sk2-title">Relatórios</span>
+              </div>
+              <div class="sk2-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></div>
+            </div>
+            <div class="sk2-body"><div>
+              <div class="sk2-icons-grid">
+                <div class="sk2-tech" data-name="LaTeX"><div class="sk2-tech-icon"><img src="svg/latex.svg" alt="LaTeX" style="width:26px;height:26px;object-fit:contain;"/></div></div>
+                <div class="sk2-tech" data-name="R Markdown"><div class="sk2-tech-icon"><img src="svg/rmarkdown.svg" alt="R Markdown" style="width:26px;height:26px;object-fit:contain;"/></div></div>
+                <div class="sk2-tech" data-name="Quarto"><div class="sk2-tech-icon"><img src="https://quarto.org/favicon.png" alt="Quarto" style="width:24px;height:24px;object-fit:contain;" onerror="this.style.display='none';this.parentElement.innerHTML='<span style=&quot;font-family:var(--mono);font-size:.55rem;font-weight:800;color:#75AADB;&quot;>Qto</span>'"/></div></div>
+                <div class="sk2-tech" data-name="HTML"><div class="sk2-tech-icon"><i class="devicon-html5-plain colored"></i></div></div>
+                <div class="sk2-tech" data-name="Microsoft Word"><div class="sk2-tech-icon"><img src="svg/word.svg" alt="Microsoft Word" style="width:26px;height:26px;object-fit:contain;"/></div></div>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- Dashboards -->
+          <div class="sk2-card">
+            <div class="sk2-header">
+              <div class="sk2-hd-left">
+                <div class="sk2-cat-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="6" y1="20" x2="6" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="14"/></svg>
+                </div>
+                <span class="sk2-title">Dashboards</span>
+              </div>
+              <div class="sk2-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></div>
+            </div>
+            <div class="sk2-body"><div>
+              <div class="sk2-icons-grid">
+                <div class="sk2-tech" data-name="Power BI — Intermediário"><div class="sk2-tech-icon"><img src="https://upload.wikimedia.org/wikipedia/commons/c/cf/New_Power_BI_Logo.svg" alt="Power BI" style="width:24px;height:24px;object-fit:contain;"/></div></div>
+                <div class="sk2-tech" data-name="Shiny — Avançado"><div class="sk2-tech-icon"><img src="https://raw.githubusercontent.com/rstudio/shiny/main/man/figures/logo.png" alt="Shiny" style="width:24px;height:24px;object-fit:contain;" onerror="this.style.display='none';this.parentElement.innerHTML='<span style=&quot;font-family:var(--mono);font-size:.55rem;font-weight:800;color:#75AADB;&quot;>Sh</span>'"/></div></div>
+                <div class="sk2-tech" data-name="Quarto Dash — Avançado"><div class="sk2-tech-icon"><img src="https://quarto.org/favicon.png" alt="Quarto" style="width:24px;height:24px;object-fit:contain;" onerror="this.style.display='none';this.parentElement.innerHTML='<span style=&quot;font-family:var(--mono);font-size:.55rem;font-weight:800;color:#75AADB;&quot;>Qdb</span>'"/></div></div>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- IA -->
+          <div class="sk2-card">
+            <div class="sk2-header">
+              <div class="sk2-hd-left">
+                <div class="sk2-cat-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z"/></svg>
+                </div>
+                <span class="sk2-title">Ferramentas de IA</span>
+              </div>
+              <div class="sk2-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></div>
+            </div>
+            <div class="sk2-body"><div>
+              <div class="sk2-icons-grid">
+                <div class="sk2-tech" data-name="ChatGPT"><div class="sk2-tech-icon"><img src="https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg" alt="ChatGPT" style="width:24px;height:24px;object-fit:contain;"/></div></div>
+                <div class="sk2-tech" data-name="Claude"><div class="sk2-tech-icon"><img src="svg/claude.svg" alt="Claude" style="width:26px;height:26px;object-fit:contain;"/></div></div>
+                <div class="sk2-tech" data-name="Gemini"><div class="sk2-tech-icon"><img src="svg/gemini.svg" alt="Gemini" style="width:26px;height:26px;object-fit:contain;"/></div></div>
+              </div>
+            </div></div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
+     COMPETÊNCIAS
+══════════════════════════════════════ -->
+    <section id="comp">
+      <div class="comp-inner">
+        <div> 
+          <div class="ey" style="margin-bottom: 1.1rem">
+            <span class="ey-n" style="color: rgba(255, 255, 255, 0.7)"
+              >02.2 — COMPETÊNCIAS</span
+            >
+          </div>
+          <h2 class="comp-h">SkillSet</h2>
+          <p class="comp-desc" style="text-align:justify;text-indent:1.8em;">
+            Visão geral das minhas competências em Estatística, Ciência de Dados e Programação, desenvolvidas por meio da minha formação acadêmica, pesquisa científica e experiências práticas.
+          </p>
+        </div>
+        <div>
+          <div class="skill-bars" id="skillBars">
+            <div class="skill-bar-item">
+              <div class="skill-bar-label">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <polyline points="8 6 3 12 8 18" />
+                  <polyline points="16 6 21 12 16 18" /></svg
+                >Programação
+              </div>
+              <span class="skill-bar-pct">97.5%</span>
+              <div class="skill-bar-track">
+                <div class="skill-bar-fill" data-w="97.5"></div>
+              </div>
+            </div>
+            <div class="skill-bar-item">
+              <div class="skill-bar-label">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <line x1="8" y1="12" x2="16" y2="12" />
+                  <line x1="8" y1="8" x2="16" y2="8" />
+                  <line x1="8" y1="16" x2="13" y2="16" /></svg
+                >Estatística Descritiva
+              </div>
+              <span class="skill-bar-pct">99%</span>
+              <div class="skill-bar-track">
+                <div class="skill-bar-fill" data-w="99"></div>
+              </div>
+            </div>
+            <div class="skill-bar-item">
+              <div class="skill-bar-label">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <rect x="5" y="5" width="14" height="14" rx="2" />
+                  <circle cx="9" cy="9" r="1" />
+                  <circle cx="15" cy="15" r="1" />
+                  <circle cx="9" cy="15" r="1" />
+                  <circle cx="15" cy="9" r="1" /></svg
+                >Probabilidade
+              </div>
+              <span class="skill-bar-pct">88%</span>
+              <div class="skill-bar-track">
+                <div class="skill-bar-fill" data-w="88"></div>
+              </div>
+            </div>
+            <div class="skill-bar-item">
+              <div class="skill-bar-label">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <circle cx="8" cy="8" r="3" />
+                  <circle cx="16" cy="8" r="3" />
+                  <circle cx="12" cy="16" r="3" /></svg
+                >Amostragem
+              </div>
+              <span class="skill-bar-pct">90%</span>
+              <div class="skill-bar-track">
+                <div class="skill-bar-fill" data-w="90"></div>
+              </div>
+            </div>
+            <div class="skill-bar-item">
+              <div class="skill-bar-label">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path d="M4 18h16" />
+                  <path d="M8 18V8" />
+                  <path d="M16 18V6" />
+                  <line x1="8" y1="8" x2="16" y2="6" /></svg
+                >Inferência Estatística
+              </div>
+              <span class="skill-bar-pct">93%</span>
+              <div class="skill-bar-track">
+                <div class="skill-bar-fill" data-w="93"></div>
+              </div>
+            </div>
+            <div class="skill-bar-item">
+              <div class="skill-bar-label">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path d="M9 3v9L3 20h18L15 12V3" />
+                  <line x1="9" y1="3" x2="15" y2="3" /></svg
+                >Experimentação Estatística
+              </div>
+              <span class="skill-bar-pct">96%</span>
+              <div class="skill-bar-track">
+                <div class="skill-bar-fill" data-w="96"></div>
+              </div>
+            </div>
+            <div class="skill-bar-item">
+              <div class="skill-bar-label">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <polyline points="4 20 8 14 12 16 16 8 20 4" />
+                  <line x1="4" y1="20" x2="20" y2="20" /></svg
+                >Regressão
+              </div>
+              <span class="skill-bar-pct">96%</span>
+              <div class="skill-bar-track">
+                <div class="skill-bar-fill" data-w="96"></div>
+              </div>
+            </div>
+            <div class="skill-bar-item">
+              <div class="skill-bar-label">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <circle cx="6" cy="12" r="3" />
+                  <circle cx="18" cy="6" r="3" />
+                  <circle cx="18" cy="18" r="3" />
+                  <line x1="9" y1="12" x2="15" y2="7.5" />
+                  <line x1="9" y1="12" x2="15" y2="16.5" /></svg
+                >Análise Multivariada
+              </div>
+              <span class="skill-bar-pct">86%</span>
+              <div class="skill-bar-track">
+                <div class="skill-bar-fill" data-w="86"></div>
+              </div>
+            </div>
+            <div class="skill-bar-item">
+              <div class="skill-bar-label">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path d="M2 12 Q5 6 8 12 Q11 18 14 12 Q17 6 20 12" />
+                  <line x1="2" y1="20" x2="22" y2="20" /></svg
+                >Séries Temporais
+              </div>
+              <span class="skill-bar-pct">94%</span>
+              <div class="skill-bar-track">
+                <div class="skill-bar-fill" data-w="94"></div>
+              </div>
+            </div>
+            <div class="skill-bar-item">
+              <div class="skill-bar-label">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <rect x="3" y="11" width="5" height="9" />
+                  <rect x="9.5" y="6" width="5" height="14" />
+                  <rect x="16" y="3" width="5" height="17" /></svg
+                >Aprendizado de Máquina
+              </div>
+              <span class="skill-bar-pct">93%</span>
+              <div class="skill-bar-track">
+                <div class="skill-bar-fill" data-w="93"></div>
+              </div>
+            </div>
+            <div class="skill-bar-item">
+              <div class="skill-bar-label">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11z" />
+                  <circle cx="12" cy="10" r="2.5" /></svg
+                >Análise Espacial
+              </div>
+              <span class="skill-bar-pct">92%</span>
+              <div class="skill-bar-track">
+                <div class="skill-bar-fill" data-w="92"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
+     PROJETOS
+══════════════════════════════════════ -->
+    <section id="projetos" class="sec">
+      <div class="sec-inner">
+        <div class="ey">
+          <span class="ey-n">03 — PROJETOS</span>
+          <div class="ey-r"></div>
+        </div>
+        <h2 class="sec-h">Trabalhos</h2>
+        <div class="outros-header" style="margin-bottom: 2rem;">
+          <div class="outros-line"></div>
+          <span class="outros-label">Projetos em Destaque</span>
+          <div class="outros-line"></div>
+        </div>
+        <div class="proj-grid">
+          <!-- DESTAQUE — COBICET -->
+          <div class="pcard pcard-featured pcard-dashboard span2">
+            <!-- Left side: number, title, description, tags -->
+            <div class="pfeat-dash-left">
+              <div class="pfeat-num">01</div>
+              <h3 class="pfeat-title" style="font-size: 1.5rem; margin-top: 0.5rem;">Modelo Híbrido Prophet + LightGBM para Previsão de Demanda Elétrica</h3>
+              <p class="pfeat-desc" style="margin-top: 0.5rem; text-align: justify;">
+                Projeto apresentado no COBICET 2025. Combinamos modelo estatístico Prophet para capturar tendências e sazonalidades com o modelo de machine learning LightGBM aplicado aos resíduos, resultando em modelo híbrido de alta precisão sobre a demanda elétrica diária do SIN (2000–2025).
+              </p>
+              <div class="ptags" style="margin-top: 1rem;">
+                <span class="ptag t">Machine Learning</span>
+                <span class="ptag t">LightGBM</span>
+                <span class="ptag t">Prophet</span>
+                <span class="ptag t">Energia Elétrica</span>
+                <span class="ptag t">COBICET 2025</span>
+              </div>
+            </div>
+            <!-- Right side: imagem -->
+            <div class="pfeat-dash-right">
+              <img
+                src="imagem/projetos_destaque/1.png"
+                data-src-light="imagem/projetos_destaque/1.png"
+                data-src-dark="imagem/projetos_destaque/1-dark.png"
+                alt="Série temporal da demanda elétrica"
+                class="pfeat-dash-img theme-img"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+            <button
+              class="pfeat-arrow"
+              onclick="window.open('projetos/projetos_em_destaque/1.html', '_blank')"
+              title="Ver apresentação"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 17L17 7M7 7h10v10"/></svg>
+            </button>
+          </div><!-- /pcard-featured -->
+
+          <!-- DESTAQUE — SÉRIES TEMPORAIS ETS -->
+          <div class="pcard pcard-featured span2">
+            <!-- Dois gráficos lado a lado -->
+            <div class="pfeat-img pfeat-img-duo">
+              <div class="pfeat-duo-grid">
+                <!-- Energia Elétrica -->
+                <div class="pfeat-duo-box">
+                  <div class="pfeat-duo-label">Energia Elétrica - SIN (ONS)</div>
+                  <img
+                    src="imagem/projetos_destaque/2.png"
+                    data-src-light="imagem/projetos_destaque/2.png"
+                    data-src-dark="imagem/projetos_destaque/2-dark.png"
+                    alt="Gráfico Energia Elétrica SIN ONS"
+                    class="pfeat-duo-img theme-img"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+                <!-- Crédito Total -->
+                <div class="pfeat-duo-box">
+                  <div class="pfeat-duo-label">Crédito Total - Banco Central</div>
+                  <img
+                    src="imagem/projetos_destaque/3.png"
+                    data-src-light="imagem/projetos_destaque/3.png"
+                    data-src-dark="imagem/projetos_destaque/3-dark.png"
+                    alt="Gráfico Crédito Total Banco Central"
+                    class="pfeat-duo-img theme-img"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+              </div>
+            </div>
+            <!-- Conteúdo -->
+            <div class="pfeat-body">
+              <div class="pfeat-row">
+                <div class="pfeat-num">02</div>
+                <div>
+                  <h3 class="pfeat-title">Modelos de Suavização Exponencial (ETS) para a Previsão de Séries Temporais</h3>
+                  <p class="pfeat-desc">
+                    Trabalho da disciplina de Séries Temporais. Aplicamos modelos ETS (Holt, Holt-Winters aditivo e multiplicativo, STLF) sobre duas séries: demanda elétrica horária do SIN (ONS) e crédito total mensal do Banco Central, avaliando desempenho através de métricas de erro e análise de resíduos.
+                  </p>
+                  <div class="ptags" style="margin-bottom:1.2rem">
+                    <span class="ptag t">ETS</span>
+                    <span class="ptag t">Holt-Winters</span>
+                    <span class="ptag t">Séries Temporais</span>
+                    <span class="ptag t">Energia Elétrica</span>
+                    <span class="ptag t">Crédito Total</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                class="pfeat-arrow"
+                onclick="window.open('projetos/projetos_em_destaque/2.html', '_blank')"
+                title="Ver apresentação"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 17L17 7M7 7h10v10"/></svg>
+              </button>
+            </div>
+          </div><!-- /pcard-featured ets -->
+
+          <div class="pcard pcard-featured pcard-dashboard span2">
+            <!-- Left side: number, title, description, tags -->
+            <div class="pfeat-dash-left">
+              <div class="pfeat-num">03</div>
+              <h3 class="pfeat-title" style="font-size: 1.5rem; margin-top: 0.5rem;">Análise Espaço-Temporal da Dengue na Bahia</h3>
+              <p class="pfeat-desc" style="margin-top: 0.5rem; text-align: justify;">
+                Estudo sobre o padrão espaço-temporal da dengue nos 417 municípios da Bahia (2021–2024), utilizando o Índice de Moran e LISA para identificar hotspots de alto risco.
+              </p>
+              <div class="ptags" style="margin-top: 1rem;">
+                <span class="ptag t">Estatística Espacial</span>
+                <span class="ptag t">Dengue</span>
+                <span class="ptag t">Bahia</span>
+                <span class="ptag t">Índice de Moran</span>
+                <span class="ptag t">LISA</span>
+              </div>
+            </div>
+            <!-- Right side: mapa de nível de alerta -->
+            <div class="pfeat-dash-right">
+              <img
+                src="imagem/projetos_destaque/4.png"
+                data-src-light="imagem/projetos_destaque/4.png"
+                data-src-dark="imagem/projetos_destaque/4-dark.png"
+                alt="Mapa do nível de alerta de dengue nos municípios da Bahia"
+                class="pfeat-dash-img theme-img"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+            <button
+              class="pfeat-arrow"
+              onclick="window.open('projetos/projetos_em_destaque/3.html', '_blank')"
+              title="Ver apresentação"
+            >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 17L17 7M7 7h10v10"/></svg>
+              </button>
+            </div>
+          </div><!-- /pcard-featured dengue -->
+        </div><!-- /proj-grid (destaque) -->
+
+        <!-- ── OUTROS PROJETOS ── -->
+        <div class="outros-header">
+          <div class="outros-line"></div>
+          <span class="outros-label">Outros Projetos</span>
+          <div class="outros-line"></div>
+        </div>
+        <div class="outros-grid">
+
+          <!-- DBC -->
+          <div class="ocard" onclick="window.open('projetos/outros_projetos/1.pdf', '_blank')">
+            <div class="ocard-top">
+              <span class="ocard-num">04</span>
+              <h3 class="ocard-title">Experimentação: Delineamento em Blocos Casualizados</h3>
+              <p class="ocard-desc">Relatório desenvolvido na disciplina de Planejamento e Análise de Experimentos I, com foco na análise de experimentos em delineamento em blocos casualizados (DBC), utilizando ANOVA, diagnóstico de resíduos e teste de Tukey.</p>
+              <div class="ptags">
+                <span class="ptag t">Experimentos</span><span class="ptag t">DBC</span><span class="ptag t">ANOVA</span><span class="ptag t">Resíduos</span><span class="ptag t">Tukey HSD</span>
+              </div>
+            </div>
+            
+            <div class="ocard-arrow-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 17L17 7M7 7h10v10"/></svg></div>
+          </div>
+
+          <!-- DQL -->
+          <div class="ocard" onclick="window.open('projetos/outros_projetos/2.pdf', '_blank')">
+            <div class="ocard-top">
+              <span class="ocard-num">05</span>
+              <h3 class="ocard-title">Experimentação: Delineamento em Quadrado Latino</h3>
+              <p class="ocard-desc">Relatório desenvolvido na disciplina de Planejamento e Análise de Experimentos I, com foco na análise de experimentos em delineamento em quadrado latino (DQL), utilizando ANOVA, diagnóstico de resíduos e teste de Tukey.</p>
+              <div class="ptags">
+                <span class="ptag t">Experimentos</span><span class="ptag t">DQL</span><span class="ptag t">ANOVA</span><span class="ptag t">Resíduos</span><span class="ptag t">Tukey HSD</span>
+              </div>
+            </div>
+            
+            <div class="ocard-arrow-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 17L17 7M7 7h10v10"/></svg></div>
+          </div>
+
+          <!-- ACP -->
+          <div class="ocard" onclick="window.open('projetos/outros_projetos/3.pdf', '_blank')">
+            <div class="ocard-top">
+              <span class="ocard-num">06</span>
+              <h3 class="ocard-title">Análise de Componentes Principais</h3>
+              <p class="ocard-desc">Apresentação desenvolvida com Túlio Herculano para a disciplina de Análise Multivariada I — UEPB. Cobrindo fundamentação teórica, materiais e métodos, resultados e vantagens/limitações da ACP.</p>
+              <div class="ptags">
+                <span class="ptag t">ACP</span><span class="ptag t">Vantagem</span><span class="ptag t">Limitação</span><span class="ptag t">Multivariada</span>
+              </div>
+            </div>
+            
+            <div class="ocard-arrow-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 17L17 7M7 7h10v10"/></svg></div>
+          </div>
+
+          <!-- Bootstrap -->
+          <div class="ocard" onclick="window.open('projetos/outros_projetos/4.pdf', '_blank')">
+            <div class="ocard-top">
+              <span class="ocard-num">07</span>
+              <h3 class="ocard-title">Bootstrap Paramétrico</h3>
+              <p class="ocard-desc">Apresentação em coautoria com Ítalo Gabriel para a disciplina de Estatística Computacional Avançada. Explicando a técnica de Bradley Efron (1970s): Bootstrap Paramétrico.</p>
+              <div class="ptags">
+                <span class="ptag t">R</span><span class="ptag t">Bootstrap</span><span class="ptag t">Reamostragem</span><span class="ptag t">IC</span>
+              </div>
+            </div>
+            
+            <div class="ocard-arrow-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 17L17 7M7 7h10v10"/></svg></div>
+          </div>
+
+          <!-- PIBIC -->
+          <div class="ocard" onclick="window.open('projetos/outros_projetos/5.pdf', '_blank')">
+            <div class="ocard-top">
+              <span class="ocard-num">08</span>
+              <h3 class="ocard-title">PIBIC: Otimização do Observatório Tecnológico da UEPB</h3>
+              <p class="ocard-desc">Bolsista PIBIC/CNPq por 12 meses (480h). Implementação de nova apresentação dos dados do Observatório Tecnológico da UEPB para promover aproveitamento institucional dos painéis de indicadores.</p>
+              <div class="ptags">
+                <span class="ptag t">Dashboards</span><span class="ptag t">CNPq</span><span class="ptag t">UEPB</span>
+              </div>
+            </div>
+            
+            <div class="ocard-arrow-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 17L17 7M7 7h10v10"/></svg></div>
+          </div>
+
+          <!-- Monte Carlo -->
+          <div class="ocard" onclick="window.open('projetos/outros_projetos/6.html', '_blank')">
+            <div class="ocard-top">
+              <span class="ocard-num">09</span>
+              <h3 class="ocard-title">Inferência Estatística: Simulação de Monte Carlo</h3>
+              <p class="ocard-desc">Atividade da disciplina de Inferência Estatística. Implementando simulações Monte Carlo em R para estimação de distribuições amostrais, intervalos de confiança e testes de hipótese.</p>
+              <div class="ptags">
+                <span class="ptag t">R</span><span class="ptag t">Monte Carlo</span><span class="ptag t">Simulação</span>
+              </div>
+            </div>
+            
+            <div class="ocard-arrow-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 17L17 7M7 7h10v10"/></svg></div>
+          </div>
+
+          <!-- Extensão -->
+          <div class="ocard" onclick="window.open('projetos/outros_projetos/7.pdf', '_blank')">
+            <div class="ocard-top">
+              <span class="ocard-num">10</span>
+              <h3 class="ocard-title">Projeto de Extensão: Custo Médio da Água Mineral em Campina Grande-PB</h3>
+              <p class="ocard-desc">Projeto de Extensão Universitária, abordando a coleta e análise de preços de água mineral no município de Campina Grande-PB.</p>
+              <div class="ptags">
+                <span class="ptag t">Água Mineral</span><span class="ptag t">Preço</span><span class="ptag t">PROEX</span><span class="ptag t">Campina Grande-PB</span>
+              </div>
+            </div>
+            
+            <div class="ocard-arrow-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 17L17 7M7 7h10v10"/></svg></div>
+          </div>
+        </div><!-- /outros-grid -->
+      </div><!-- /sec-inner -->
+      <div class="projetos-github-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M3 3h18v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3z"/><path d="M3 8h18"/></svg>
+        Mais projetos disponíveis no repositório do <a href="https://github.com/elizeumedeirosest" target="_blank" rel="noopener">GitHub <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12" style="vertical-align:middle"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>
+      </div>
+    </section><!-- /projetos -->
+
+    <!-- ══════════════════════════════════════
+     CERTIFICADOS
+══════════════════════════════════════ -->
+    <section id="pub" class="sec">
+      <div class="sec-inner">
+        <div class="ey">
+          <span class="ey-n">04 —  CERTIFICADOS</span>
+          <div class="ey-r"></div>
+        </div>
+        <h2 class="sec-h">Certificados <em>&amp; Atividades Acadêmicas</em></h2>
+
+        <!-- ── CURSOS ── -->
+        <p class="cert-list-title">Cursos</p>
+        <div class="cert-grid" role="list">
+          <div class="pub-item reveal" role="listitem">
+            <div class="pub-item-left">
+              <div class="pub-title">Estatística &amp; Programação</div>
+              <div class="pub-meta">Curso realizado na plataforma Word Aid, explorando fundamentos de estatística e programação</div>
+            </div>
+            <div class="pub-card-foot">
+              <span class="pub-hours">4h</span>
+              <button class="pub-arrow-btn" onclick="openFileModal('certificados/certificado2.pdf', 'Estatística & Programação')" title="Ver certificado" style="background: var(--blue); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+            </div>
+          </div>
+
+          <div class="pub-item reveal" role="listitem">
+            <div class="pub-item-left">
+              <div class="pub-title">Estatística com Linguagem R</div>
+              <div class="pub-meta">Curso realizado na plataforma Udemy, voltado para a Análise estatística e programação em R</div>
+            </div>
+            <div class="pub-card-foot">
+              <span class="pub-hours">20h</span>
+              <button class="pub-arrow-btn" onclick="openFileModal('certificados/certificado1.pdf', 'Estatística com Linguagem R - Udemy')" title="Ver certificado" style="background: var(--blue); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+            </div>
+          </div>
+
+          <div class="pub-item reveal" role="listitem">
+            <div class="pub-item-left">
+              <div class="pub-title">Linguagem R para Análise de Dados</div>
+              <div class="pub-meta">Curso realizado na plataforma Udemy. Voltado para a análise de dados, visualização e estatística com a linguagem R</div>
+            </div>
+            <div class="pub-card-foot">
+              <span class="pub-hours">13h</span>
+              <button class="pub-arrow-btn" onclick="openFileModal('certificados/certificado4.pdf', 'Linguagem R para Análise de Dados')" title="Ver certificado" style="background: var(--blue); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+            </div>
+          </div>
+
+          <div class="pub-item reveal" role="listitem">
+            <div class="pub-item-left">
+              <div class="pub-title">Linguagem de Programação Python – Básico</div>
+              <div class="pub-meta">Curso realizado na escola virtual da Fundação Bradesco, voltado para os fundamentos da linguagem Python</div>
+            </div>
+            <div class="pub-card-foot">
+              <span class="pub-hours">18h</span>
+              <button class="pub-arrow-btn" onclick="openFileModal('certificados/certificado3.pdf', 'Python Básico — Bradesco')" title="Ver certificado" style="background: var(--blue); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+            </div>
+          </div>
+
+          <div class="pub-item reveal" role="listitem">
+            <div class="pub-item-left">
+              <div class="pub-title">Introdução ao Python</div>
+              <div class="pub-meta">Curso realizado na plataforma AlfaHelix, explorando fundamentos da linguagem Python</div>
+            </div>
+            <div class="pub-card-foot">
+              <span class="pub-hours">2h</span>
+              <button class="pub-arrow-btn" onclick="openFileModal('certificados/certificado5.pdf', 'Introdução ao Python')" title="Ver certificado" style="background: var(--blue); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── EVENTOS ACADÊMICOS ── -->
+        <p class="cert-list-title" style="margin-top: 2rem">
+          Eventos Acadêmicos
+        </p>
+        <div class="cert-grid" role="list">
+          <div class="pub-item reveal" role="listitem">
+            <div class="pub-item-left">
+              <div class="pub-title">IV EPBEST — IV Encontro Paraibano de Estatística</div>
+              <div class="pub-meta">IV EPBEST - Palestras, minicursos e atividades científicas</div>
+            </div>
+            <div class="pub-card-foot">
+              <span class="pub-hours">38h</span>
+              <button class="pub-arrow-btn" onclick="openFileModal('certificados/certificado6.pdf', 'IV EPBEST — IV Encontro Paraibano de Estatística')" title="Ver certificado" style="background: var(--blue); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+            </div>
+          </div>
+
+          <div class="pub-item reveal" role="listitem">
+            <div class="pub-item-left">
+              <div class="pub-title">Dia do Estatístico 2026</div>
+              <div class="pub-meta">Encontro: Dia do Estatístico - UEPB</div>
+            </div>
+            <div class="pub-card-foot">
+              <span class="pub-hours">11h</span>
+              <button class="pub-arrow-btn" onclick="openFileModal('certificados/certificado7.pdf', 'Dia do Estatístico 2026')" title="Ver certificado" style="background: var(--blue); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+            </div>
+          </div>
+
+          <div class="pub-item reveal" role="listitem">
+            <div class="pub-item-left">
+              <div class="pub-title">Tuberculose em Foco: Evidências, Desafios e Inovações na Saúde
+                Pública</div>
+              <div class="pub-meta">Encontro: Tuberculose em Foco</div>
+            </div>
+            <div class="pub-card-foot">
+              <span class="pub-hours">4h</span>
+              <button class="pub-arrow-btn" onclick="openFileModal('certificados/certificado8.pdf', 'Tuberculose em Foco: Evidências, Desafios e Inovações na Saúde Pública')" title="Ver certificado" style="background: var(--blue); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+            </div>
+          </div>
+
+          <div class="pub-item reveal" role="listitem">
+            <div class="pub-item-left">
+              <div class="pub-title">Dia do Estatístico 2023</div>
+              <div class="pub-meta">Encontro: Dia do Estatístico - UEPB</div>
+            </div>
+            <div class="pub-card-foot">
+              <span class="pub-hours">11h</span>
+              <button class="pub-arrow-btn" onclick="openFileModal('certificados/certificado9.pdf', 'Dia do Estatístico 2023')" title="Ver certificado" style="background: var(--blue); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── BOLSAS & PROJETOS ── -->
+        <p class="cert-list-title" style="margin-top: 2rem">
+          Bolsas &amp; Projetos
+        </p>
+        <div class="cert-grid" role="list">
+          <div class="pub-item reveal" role="listitem">
+            <div class="pub-item-left">
+              <div class="pub-title">PIBIC/CNPq — Otimização do Observatório Tecnológico da UEPB</div>
+              <div class="pub-meta">Certificado de participação no projeto de iniciação científica</div>
+            </div>
+            <div class="pub-card-foot">
+              <span class="pub-hours">480h</span>
+              <button class="pub-arrow-btn" onclick="openFileModal('certificados/certificado10.pdf', 'PIBIC/CNPq — Observatório Tecnológico da UEPB')" title="Ver certificado" style="background: var(--blue); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+            </div>
+          </div>
+
+          <div class="pub-item reveal" role="listitem">
+            <div class="pub-item-left">
+              <div class="pub-title">PROEX/UEPB — Inspeção e Avaliação do Custo Médio da Água Mineral
+                em Campina Grande</div>
+              <div class="pub-meta">Certificado de participação no projeto de extensão</div>
+            </div>
+            <div class="pub-card-foot">
+              <span class="pub-hours">360h</span>
+              <button class="pub-arrow-btn" onclick="openFileModal('certificados/certificado11.pdf', 'PROEX/UEPB — Inspeção e Avaliação do Custo Médio da Água Mineral em Campina Grande')" title="Ver certificado" style="background: var(--blue); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
+     CTA
+══════════════════════════════════════ -->
+    <div class="cta-retro" id="contato">
+      <div class="retro-grid-wrap" aria-hidden="true">
+        <div class="retro-grid"></div>
+        <div class="retro-fade"></div>
+      </div>
+      <div class="retro-content">
+        <h2 class="retro-h">Vamos <em>trabalhar</em> juntos?</h2>
+        <p class="retro-sub">
+          Entre em contato comigo e vamos discutir como posso ajudá-lo a
+          atingir seus objetivos utilizando a Estatística.
+        </p>
+        <a
+          href="https://wa.me/5583998444502?text=Ol%C3%A1%20Elizeu%2C%20tenho%20um%20projeto%20para%20voc%C3%AA!"
+          target="_blank"
+          rel="noopener"
+          class="magic-btn"
+        >
+          <!-- WhatsApp icon -->
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+          Entre em contato
+        </a>
+        <div class="retro-socials">
+          <a href="https://github.com/elizeumedeirosest" target="_blank" rel="noopener" class="retro-soc" title="GitHub">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          </a>
+          <a href="https://www.linkedin.com/in/elizeu-medeiros-3a86b73b0" target="_blank" rel="noopener" class="retro-soc" title="LinkedIn">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+          </a>
+          <a href="https://instagram.com/elizeumedeiros01" target="_blank" rel="noopener" class="retro-soc" title="Instagram">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+          </a>
+          <a href="https://lattes.cnpq.br/6534730479666967" target="_blank" rel="noopener" class="retro-soc" title="Lattes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M8 9h3m0 0h4m-4 0v6M8 15h3"/></svg>
+          </a>
+          <a href="mailto:elizeumedeirosest@gmail.com" class="retro-soc" title="Email">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22,6 12,13 2,6"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div class="foot-logo">Elizeu M.</div>
+      <div class="foot-copy">Copyright &copy; Elizeu Medeiros 2026</div>
+    </footer>
+
+    <script src="js/portfolio.js"></script>
+    <script src="js/hero-gl.js"></script>
+  </body>
+</html>
